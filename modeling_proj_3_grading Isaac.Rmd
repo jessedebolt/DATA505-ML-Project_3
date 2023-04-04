@@ -72,8 +72,13 @@ Please remember: a statement like "PC2 is not a meaningful predictor for our mod
 kclust <- kmeans(income, centers = 3)
 kclust$centers
 
+```
+
+```{r}
 glance(kclust)
 ```
+
+
 ##Add Clusters to original dataset
 ```{r}
 incomek <- augment(kclust,income)
@@ -82,19 +87,26 @@ head(incomek)
 
 ##Visualize Clusters
 ```{r}
-#modifying wine example-not finished
+#need to do more of these and change the scale
 incomek %>% 
-  pivot_longer(c(oak, finish, fruit),names_to = "feature") %>% 
+  pivot_longer(c(age, fnlwgt, 'education-num'),names_to = "feature") %>% 
   ggplot(aes(value, fill=.cluster))+
   geom_density(alpha=0.3)+
   facet_wrap(~feature)
 
 #or
 incomek %>% 
-  pivot_longer(c(points,price),names_to = "feature") %>% 
+  pivot_longer(c(`capital-gain`,`capital-loss`),names_to = "feature") %>% 
   ggplot(aes(value, fill=.cluster))+
   geom_density(alpha=0.3)+
   facet_wrap(~feature)
+
+incomek %>% 
+  pivot_longer(c(`hours-per-week`,workclass_Private),names_to = "feature") %>% 
+  ggplot(aes(value, fill=.cluster))+
+  geom_density(alpha=0.3)+
+  facet_wrap(~feature)
+
 ```
 
 ##Try different numbers of clusters
@@ -114,15 +126,15 @@ kclusts <- tibble(k = 1:6) %>%
 assignments <- kclusts %>% 
   unnest(augmented)
 
-#need to change price points
-ggplot(assignments, aes(price, points)) +
+#need to changed from price points, but still not right
+ggplot(assignments, aes(age, 'education-num')) +
   geom_point(aes(color = .cluster), alpha=0.3) + 
   facet_wrap(~ k)
 ```
 
 ##Look at improvement in within-cluster error
 ```{r}
-#can still look for elbow (looks like about 3?)
+#can still look for elbow (looks like about 4)
 clusterings <- kclusts %>%
   unnest(glanced, .drop = TRUE)
 
