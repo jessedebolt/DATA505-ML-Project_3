@@ -44,11 +44,19 @@ pr_income <- prcomp(x = select(income, -income_above_50k), scale = T, center = T
 
 summary(pr_income)
 
+# run the component breakdown
 ```
 **Answer:** PC37 - Cumulative Proportion = 0.50628
 
 
 * Can you give some interpretation of the principal components?
+```{r}
+rownames_to_column(as.data.frame(pr_income$rotation)) %>%
+select(1:6) %>%
+filter(abs(PC1) >= 0.25 | abs(PC2) >= 0.25 | abs(PC3) >= 0.25 | abs(PC4) >= 0.25 | abs(PC5) >= 0.25)
+
+```
+
 **Answer:**.........................
 
 
@@ -73,7 +81,11 @@ filter(abs(PC1) >= 0.25 | abs(PC2) >= 0.25 | abs(PC3) >= 0.25 | abs(PC4) >= 0.25
 * How well can you predict income_above_50k using the first 5 or 6 principal components? How about only the first 2?
 ```{r}
 # Factor loadings
-pr_income$rotation
+#pr_income$rotation
+
+prc <- bind_cols(select(wine,variety),as.data.frame(pr_wine$x)) %>%
+select(1:5)# %>%
+#rename("pricey"=PC1, "quality_french_oak"=PC2, "crappy_french_oak"=PC3, "willamette_valley"=PC4)
 
 ```
 
