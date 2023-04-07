@@ -33,7 +33,7 @@ income = read_csv("./openml_1590.csv", na=c("?")) %>%
   select(-class) %>%
   dummy_cols(remove_selected_columns = T)
 
-View(income)
+#View(income)
 ```
 
 ## Some questions about the data
@@ -66,10 +66,18 @@ Please remember: a statement like "PC2 is not a meaningful predictor for our mod
 * bivariate chart(s) against meaningful variables and/or analysis of density plots
 * meaningful interpretation / discussion of conclusions 
 
+##preprocessing before K-means clustering
+```{r}
+#preprocessing data
+income_scaled <- income %>% 
+    mutate(age=scale(age), fnlwgt=scale(fnlwgt), `education-num`=scale(`education-num`), `capital-gain`=scale(`capital-gain`), `capital-loss`=scale(`capital-loss`), `hours-per-week`=scale(`hours-per-week`))
+```
+
+
 ##Basic K-means clustering
 ```{r}
 #setting # of clusters to 3 (that's K)
-kclust <- kmeans(income, centers = 3)
+kclust <- kmeans(income_scaled, centers = 3)
 kclust$centers
 
 ```
@@ -81,20 +89,19 @@ glance(kclust)
 
 ##Add Clusters to original dataset
 ```{r}
-incomek <- augment(kclust,income)
+incomek <- augment(kclust,income_scaled)
 head(incomek)
 ```
 
 ##Visualize Clusters
 ```{r}
-#need to do more of these and change the scale
+#what do these mean?
 incomek %>% 
-  pivot_longer(c(age, fnlwgt, 'education-num'),names_to = "feature") %>% 
+  pivot_longer(c(age, fnlwgt, `education-num`),names_to = "feature") %>% 
   ggplot(aes(value, fill=.cluster))+
   geom_density(alpha=0.3)+
   facet_wrap(~feature)
 
-#or
 incomek %>% 
   pivot_longer(c(`capital-gain`,`capital-loss`),names_to = "feature") %>% 
   ggplot(aes(value, fill=.cluster))+
@@ -107,17 +114,23 @@ incomek %>%
   geom_density(alpha=0.3)+
   facet_wrap(~feature)
 
+incomek %>% 
+  pivot_longer(c(`hours-per-week`,income_above_50k),names_to = "feature") %>% 
+  ggplot(aes(value, fill=.cluster))+
+  geom_density(alpha=0.3)+
+  facet_wrap(~feature)
+
 ```
 
 ##Try different numbers of clusters
 ```{r}
-kclusts <- tibble(k = 1:6) %>%
+kclusts <- tibble(k = 1:9) %>%
   mutate(
-    kclust = map(k, ~kmeans(income, .x)),
+    kclust = map(k, ~kmeans(income_scaled, .x)),
     glanced = map(kclust, glance),
-    augmented = map(kclust, augment, income)
+    augmented = map(kclust, augment, income_scaled)
   )
-#with 1:9 get: Warning: Quick-TRANSfer stage steps exceeded maximum (= 2261100)
+
 
 ```
 
@@ -126,15 +139,15 @@ kclusts <- tibble(k = 1:6) %>%
 assignments <- kclusts %>% 
   unnest(augmented)
 
-#need to changed from price points, but still not right
-ggplot(assignments, aes(age, 'education-num')) +
+#changed from price points from lecture
+ggplot(assignments, aes(`hours-per-week`, `education-num`)) +
   geom_point(aes(color = .cluster), alpha=0.3) + 
   facet_wrap(~ k)
 ```
 
 ##Look at improvement in within-cluster error
 ```{r}
-#can still look for elbow (looks like about 4)
+#can still look for elbow (looks like about 5 or 6)
 clusterings <- kclusts %>%
   unnest(glanced, .drop = TRUE)
 
