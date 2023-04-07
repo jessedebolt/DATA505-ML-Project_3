@@ -62,13 +62,13 @@ cat("The number of principal components needed to explain 50% of the variation i
 * Can you give some interpretation of the principal components?
 # Viewing the loadings of each principal component. Loadings allow us to see the individual contribution of each predictor variable to each principal component.
 ```{r}
-lodaings <- rownames_to_column(as.data.frame(pr_income$rotation)) %>%
+loadings <- rownames_to_column(as.data.frame(pr_income$rotation)) %>%
 select(1:6) %>%
-filter(abs(PC1) >= 0.35 | abs(PC2) >= 0.35 | abs(PC3) >= 0.35 | abs(PC4) >= 0.35 | abs(PC5) >= 0.35)
+filter(abs(PC1) >= 0.25 | abs(PC2) >= 0.25 | abs(PC3) >= 0.25 | abs(PC4) >= 0.25 | abs(PC5) >= 0.25)
 
 ```
 
-**Answer:**.........................
+**Answer:**pc1=Married-Male, pc2=Educated-Mexican, pc3=White-American, PC4=Mature-Single/divorced-Female, pc5=Black-American
 
 
 * Look at the scree plot. How many PCs would you choose based on that?
@@ -82,6 +82,7 @@ screeplot(pr_income, type = "lines")
 * Are the first few Principal Components good predictors of income_above_50k?
 # "To do this, you can use the predict() function in R. This function will take a princomp object and a variable as input and return a vector of predicted values for the variable. You can then use the summary() function to get information about the accuracy of the predictions. The rmse attribute of the summary object contains the root mean squared error of the predictions. This can be used to assess how well the principal components predict the variable."
 ```{r}
+
 prc <- bind_cols(select(income,income_above_50k),as.data.frame(pr_income$x)) %>%
 select(1:5)
 
