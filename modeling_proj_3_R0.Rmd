@@ -62,7 +62,7 @@ cat("The number of principal components needed to explain 50% of the variation i
 * Can you give some interpretation of the principal components?
 # Viewing the loadings of each principal component. Loadings allow us to see the individual contribution of each predictor variable to each principal component.
 ```{r}
-rownames_to_column(as.data.frame(pr_income$rotation)) %>%
+lodaings <- rownames_to_column(as.data.frame(pr_income$rotation)) %>%
 select(1:6) %>%
 filter(abs(PC1) >= 0.35 | abs(PC2) >= 0.35 | abs(PC3) >= 0.35 | abs(PC4) >= 0.35 | abs(PC5) >= 0.35)
 
@@ -80,9 +80,79 @@ screeplot(pr_income, type = "lines")
 
 
 * Are the first few Principal Components good predictors of income_above_50k?
-# Using logistic regression to fit a model using the first few principal components as predictors and revaluate the model performance using cross-validation.
+# "To do this, you can use the predict() function in R. This function will take a princomp object and a variable as input and return a vector of predicted values for the variable. You can then use the summary() function to get information about the accuracy of the predictions. The rmse attribute of the summary object contains the root mean squared error of the predictions. This can be used to assess how well the principal components predict the variable."
+```{r}
+prc <- bind_cols(select(income,income_above_50k),as.data.frame(pr_income$x)) %>%
+select(1:5)
+
+fit <- train(income_above_50k ~ .,
+             data = prc,
+             method = "naive_bayes",
+             metric = "accuracy",
+             trControl = trainControl(method = "cv"))
+
+confusionMatrix(predict(fit, prc),factor(prc$variety))
+```
+
+
+
+
+
+
+
 ```{r}
 
+# Load the dataset
+income <- read.csv("income.csv")
+
+# Calculate the principal components
+pca <- prcomp(income)
+
+# Determine how many principal components are needed to explain half the variation
+n <- which.min(pca$sdev) - 1
+
+# Provide some interpretation of the principal components
+loadings <- pca$loadings
+
+# Decide if the first few principal components  are good predictors of the 'income_above_50k' variable
+pred <- predict(pr_income, income$income_above_50k)
+summary(pred)
+
+# Determine how well we can predict the 'income_above_50k' variable using the first five or six principal components and just the first two
+pred5 <- predict(pca, income$income_above_50k, ncomp=5)
+summary(pred5)
+pred2 <- predict(pca, income$income_above_50k, ncomp=2)
+summary(pred2)
+
+
+
+pred <- predict(pca, income$income_above_50k)
+summary(pred)
+
+
+
+set.seed(555)
+
+# control <- trainControl(method = "cv", number = 5)
+# 
+# income_index <- createDataPartition(income$income_above_50k, p = 0.80, list = FALSE)
+# 
+# train <- income[ income_index, ]
+# test <- income[-income_index, ]
+# 
+# fit <- train(income ~ .,
+#              data = train,
+#              trControl = control,
+#              method = "rf")
+
+formula <- as.formula("income_above_50k ~ PC1 + PC2")
+
+# Fit a logistic regression model using the first two principal components
+model <- train(formula,
+               data = pr_income$rotation,
+               method = "glmnet",
+               family = "binomial",
+               trControl = trainControl(method = "cv"))
 
 ```
 **Answer:** ..............

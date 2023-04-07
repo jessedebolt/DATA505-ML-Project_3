@@ -1,0 +1,59 @@
+* Run PCA on the dataset. How many principal components do you need to explain half the variation? 
+Done
+
+* Can you give some interpretation of the principal components?
+Code done, just need to analyse. This should be no problem
+
+* Look at the scree plot. How many PCs would you choose based on that?
+Done
+
+* Are the first few Principal Components good predictors of income_above_50k?
+Need to run a model, or do we use predict function?
+
+* How well can you predict income_above_50k using the first 5 or 6 principal components? How about only the first 2?
+Same question as above, I think.
+
+
+10 pts PCA
+* analysis and interpretation of factor loadings
+Should be able to do with what have completed so far.
+
+* discussion of scree plot and/or analysis of some density plots of PCs
+Can discuss scree plot, need to do density plots and interpret them.
+
+* meaningful interpretation / discussion of conclusions 
+Not there yet, should be fine once we complete other two points above.
+
+--------------------------------------------------------
+
+* Can you gain any insights into the data based on k-means clustering? 
+
+* Can you visualize and interpret some or all of your clusters?
+
+* Using any and all techniques we have learned, build the best predictive model for income_above_50k that you can. What are your best features? What model did you use? What interpretations can you draw?
+
+* What metric can you use to assess model performance? Why is that a good choice of metric in this case?
+
+* What are some key insights you found through your analysis?
+
+
+10 pts k-means
+
+* discussion for choosing number of clusters
+* analysis of cluster centers
+* bivariate chart(s) against meaningful variables and/or analysis of density plots
+* meaningful interpretation / discussion of conclusions 
+
+-------------------------------------------
+10 pts supervised learning
+
+* feature engineering / selection, whether with PCA or otherwise
+Can discuss how we created dummies, etc. Should we eliminate any columns like 'fnlwgt'?
+
+* interpretation of variable importance, coefficients if applicable
+
+* justification of choice of metric
+
+* discussion of choice or tuning of hyperparameters, if any
+
+* meaningful discussion of predictive power and conclusions from model
