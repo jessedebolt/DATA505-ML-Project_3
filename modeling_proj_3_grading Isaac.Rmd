@@ -156,6 +156,26 @@ ggplot(clusterings, aes(k, tot.withinss)) +
 ```
 
 
+```{r}
+# Run k-means with the optimal number of clusters
+optimal_k <- 8
+kclust_optimal <- kmeans(income_scaled, centers = optimal_k)
+
+# Check the cluster centroids
+kclust_optimal$centers
+
+```
+
+```{r}
+# Run k-means with 8 clusters
+kclust <- kmeans(income_scaled, centers = 8)
+
+# Print the cluster centers
+print(kclust$centers)
+
+```
+
+
 10 pts supervised learning
 
 * feature engineering / selection, whether with PCA or otherwise
