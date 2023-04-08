@@ -175,6 +175,84 @@ print(kclust$centers)
 
 ```
 
+##Outliers? lof
+```{r}
+library(dbscan)
+lof <- lof(income, minPts = 10)
+summary(lof)
+
+hist(lof, breaks = 10, main = "LOF (minPts = 10)")
+
+plot(sort(lof), type = "l",  main = "LOF (minPts = 10)",
+  xlab = "Points sorted by LOF", ylab = "LOF")
+
+#capital gain/loss
+plot(select(income, c("capital-gain", "capital-loss")), pch = ".", main = "LOF (minPts = 10)", asp = 1)
+points(select(income, c("capital-gain", "capital-loss")), cex = (lof - 1) * 4, pch = 1, col = "red")
+text(income[lof > 1.3,], labels = round(lof, 1)[lof > 1.3], pos = 3)
+
+#education age
+plot(select(income, c("education-num", "age")), pch = ".", main = "LOF (minPts = 10)", asp = 1)
+points(select(income, c("education-num", "age")), cex = (lof - 1) * 4, pch = 1, col = "red")
+text(income[lof > 1.3,], labels = round(lof, 1)[lof > 1.3], pos = 3)
+
+
+```
+
+##Outliers isolation forest
+```{r}
+library(isotree)
+model = isolation.forest(income, ndim=1, ntrees=10)
+scores = predict(model, income, type="score")
+hist(scores, breaks = 10, main = "IF Scores")
+
+plot(sort(scores), type = "l",  main = "IF Scores",
+  xlab = "Points sorted by score", ylab = "IF score")
+
+plot(select(income, c(`hours-per-week`, `education-num`)), pch = ".", main = "IF Scores", asp = 1)
+points(select(income, c(`hours-per-week`, `education-num`))[scores > 0.5,], cex = as.data.frame(scores)[scores > 0.5,])
+       
+```
+
+##Model kappa .57 with no feature engineering
+```{r}
+#income$income_above_50k <- as.factor(income$income_above_50k)
+income$income_above_50k <- factor(income$income_above_50k, levels = c(FALSE, TRUE), labels = c("Below_50K", "Above_50K"))
+
+
+#timer
+start_time <- Sys.time()
+
+
+# specify the model to be used (i.e. KNN, Naive Bayes, decision tree, random forest, bagged trees) and the tuning parameters used
+ctrl <- trainControl(method = "cv", number = 3, classProbs = TRUE, summaryFunction = twoClassSummary)
+set.seed(504) 
+
+income_index <- createDataPartition(income$income_above_50k, p = 0.80, list = FALSE)
+train <- income[ income_index, ]
+test <- income[-income_index, ]
+
+# example spec for rf
+fit <- train(income_above_50k ~ .,
+             data = train, 
+             method = "rf",
+             ntree = 20, 
+             tuneLength = 3,
+             metric = "ROC",
+             trControl = ctrl)
+
+fit
+
+confusionMatrix(predict(fit, test),factor(test$income_above_50k))
+
+
+#end timer
+end_time <- Sys.time()
+time_taken <- end_time - start_time
+print(time_taken)
+print(as.numeric(time_taken, units = "mins"))
+```
+
 
 10 pts supervised learning
 
