@@ -27,12 +27,16 @@ Need to finalize above questions, then do formal write-up.
 --------------------------------------------------------
 
 * Can you gain any insights into the data based on k-means clustering? 
+I did lots of clustering not sure how to interpret exactly.  I need to extrapolate back out from scaled data for it to make sense.
 
 * Can you visualize and interpret some or all of your clusters?
+I visualized quite a few ways, I understand some of it.
 
 * Using any and all techniques we have learned, build the best predictive model for income_above_50k that you can. What are your best features? What model did you use? What interpretations can you draw?
+I ran one test model to start, kappa .57, need to engineer features, and test different model versions, maybe with how he showed in class to create a function and have it run a list of different models.
 
 * What metric can you use to assess model performance? Why is that a good choice of metric in this case?
+
 
 * What are some key insights you found through your analysis?
 
