@@ -2,16 +2,16 @@
 Done
 
 * Can you give some interpretation of the principal components?
-Code done, just need to analyse. This should be no problem
+Done
 
 * Look at the scree plot. How many PCs would you choose based on that?
 Done
 
 * Are the first few Principal Components good predictors of income_above_50k?
-Need to run a model, or do we use predict function?
+Done
 
 * How well can you predict income_above_50k using the first 5 or 6 principal components? How about only the first 2?
-Same question as above, I think.
+Done
 
 
 10 pts PCA
@@ -19,10 +19,10 @@ Same question as above, I think.
 Should be able to do with what have completed so far.
 
 * discussion of scree plot and/or analysis of some density plots of PCs
-Can discuss scree plot, need to do density plots and interpret them.
+Can discuss scree plot, need to decipher, and interpret density plots.
 
 * meaningful interpretation / discussion of conclusions 
-Not there yet, should be fine once we complete other two points above.
+Need to finalize above questions, then do formal write-up.
 
 --------------------------------------------------------
 

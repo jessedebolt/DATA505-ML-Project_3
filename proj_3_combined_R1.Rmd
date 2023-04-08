@@ -1,0 +1,317 @@
+---
+title: "Project 3"
+author: "Jesse DeBolt & Isaac Johnson"
+date: "03/16/2023"
+output:
+  pdf_document:
+    df_print: kable
+    fig_width: 11
+    fig_height: 8
+  html_document:
+    df_print: paged
+---
+
+
+## Setup
+```{r setup, message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+library(tidyverse)
+library(tidytext)
+library(caret)
+library(fastDummies)
+library(randomForest)
+# https://www.openml.org/d/1590
+
+raw_income = read_csv("https://raw.githubusercontent.com/jessedebolt/DATA505-ML-Project_3/main/openml_1590.csv", na=c("?"))
+
+income = read_csv("https://raw.githubusercontent.com/jessedebolt/DATA505-ML-Project_3/main/openml_1590.csv", na=c("?")) %>%
+  drop_na() %>%
+  mutate(income_above_50k = class==">50K") %>%
+  select(-class) %>%
+  dummy_cols(remove_selected_columns = T)
+
+income$income_above_50k = as.factor(income$income_above_50k)
+
+#View(income)
+
+```
+
+## Some questions about the data
+
+Please try at least a few of the following:
+
+###* Run PCA on the dataset.
+```{r results='hide'}
+pr_income <- prcomp(x = select(income, -income_above_50k), scale = T, center = T)
+
+summary(pr_income)
+```
+
+
+### Determine how many principal components are needed to explain half the variation
+```{r}
+cumulative_proportion <- cumsum(pr_income$sdev^2 / sum(pr_income$sdev^2))
+
+n_components <- min(which(cumulative_proportion >= 0.5))
+
+cat("The number of principal components needed to explain 50% of the variation is", n_components)
+
+```
+**Question:**Determine how many principal components are needed to explain half the variation
+**Answer:** The number of principal components needed to explain 50% of the variation is 37
+
+
+**Question:** Can you give some interpretation of the principal components?
+# Viewing the loadings of each principal component. Loadings allow us to see the individual contribution of each predictor variable to each principal component.
+```{r}
+loadings <- rownames_to_column(as.data.frame(pr_income$rotation)) %>%
+select(1:6) %>%
+filter(abs(PC1) >= 0.25 | abs(PC2) >= 0.25 | abs(PC3) >= 0.25 | abs(PC4) >= 0.25 | abs(PC5) >= 0.25)
+
+loadings
+
+```
+**Question:**Can you give some interpretation of the principal components?
+**Answer:**pc1=Married-Male, pc2=Educated-Professional-Mexican, pc3=White-American-With_child, PC4=Mature-Single-Female, pc5=Black-Professional-American
+
+
+* Look at the scree plot. How many PCs would you choose based on that?
+```{r}
+screeplot(pr_income, type = "lines")
+
+```
+**Question:**Look at the scree plot. How many PCs would you choose based on that?
+**Answer:** We would choose five PCs since it appears as though that is a good representation of the 'elbow'.
+
+
+## Are the first few Principal Components good predictors of income_above_50k?
+### "To do this, you can use the predict() function in R. This function will take a princomp object and a variable as input and return a vector of predicted values for the variable. You can then use the summary() function to get information about the accuracy of the predictions. The rmse attribute of the summary object contains the root mean squared error of the predictions. This can be used to assess how well the principal components predict the variable."
+```{r}
+# Add income above 50k back into the data and name principal components
+prc <- bind_cols(select(income,income_above_50k),as.data.frame(pr_income$x)) %>%
+select(1:6) %>% 
+  rename(Married_Male = PC1) %>% 
+  rename(Educated_Professional_Mexican = PC2) %>% 
+  rename(White_American_With_child = PC3) %>% 
+  rename(Mature_Single_Female = PC4) %>% 
+  rename(Black_Professional_American = PC5)
+
+```
+
+
+# Density of different components by income (Factors 1&2)
+```{r}
+prc %>%
+  select(income_above_50k, Married_Male, Educated_Professional_Mexican) %>%
+  pivot_longer(cols = -income_above_50k,names_to = "component",values_to = "loading") %>%
+ggplot(aes(loading, fill=income_above_50k))+
+geom_density(alpha=0.5)+
+facet_grid(.~component)
+
+```
+
+# Density of different components by income (Factors 3&4)
+```{r}
+prc %>%
+  select(income_above_50k, White_American_With_child, Mature_Single_Female) %>%
+  pivot_longer(cols = -income_above_50k,names_to = "component",values_to = "loading") %>%
+ggplot(aes(loading, fill=income_above_50k))+
+geom_density(alpha=0.5)+
+facet_grid(.~component)
+
+```
+
+# Density of different components by income (Factors 4&5)
+```{r}
+prc %>%
+  select(income_above_50k, Mature_Single_Female, Black_Professional_American) %>%
+  pivot_longer(cols = -income_above_50k,names_to = "component",values_to = "loading") %>%
+ggplot(aes(loading, fill=income_above_50k))+
+geom_density(alpha=0.5)+
+facet_grid(.~component)
+
+```
+# Use these 5 factors for prediction
+```{r}
+fit <- train(income_above_50k ~ .,
+             data = prc,
+             method = "naive_bayes",
+             trControl = trainControl(method = "cv"))
+
+
+confusionMatrix(predict(fit, prc),factor(prc$income_above_50k))
+
+```
+**Question:**Are the first few Principal Components good predictors of income_above_50k?
+**Answer:**With 80% accuracy we can say that we are somewhat accurate in predicting if income is above $50k. When reviewing the truth matrix:
+Prediction FALSE  TRUE
+     FALSE 29423  4384
+     TRUE   4591  6824
+we can see that we are good at predicting true negatives, however predicting true positives are not as good.
+
+
+**Question:** How well can you predict income_above_50k using the first 5 or 6 principal components? How about only the first 2?
+```{r}
+fit <- train(income_above_50k ~ Married_Male+Educated_Professional_Mexican,
+             data = prc,
+             method = "naive_bayes",
+             trControl = trainControl(method = "cv"))
+
+
+confusionMatrix(predict(fit, prc),factor(prc$income_above_50k))
+
+```
+**Question:** How well can you predict income_above_50k using the first 5 or 6 principal components? How about only the first 2?
+**Answer:**For the first five or six principals we saw above that we are somewhat accurate in predicting if income is above \$50k. For the first two principal components we can see that we have an 81% accuracy, which means we are somewhat accurate in predicting if income is above \$50k.  When reviewing the truth matrix:
+Prediction FALSE  TRUE
+     FALSE 30729  5337
+     TRUE   3285  5871
+we can see that we are slightly better at predicting true negatives, however predicting true positives are slightly better with the first five principal components.
+
+
+##preprocessing before K-means clustering
+```{r}
+#preprocessing data
+income_scaled <- income %>% 
+    mutate(age=scale(age), fnlwgt=scale(fnlwgt), `education-num`=scale(`education-num`), `capital-gain`=scale(`capital-gain`), `capital-loss`=scale(`capital-loss`), `hours-per-week`=scale(`hours-per-week`))
+```
+
+
+##Basic K-means clustering
+```{r}
+#setting # of clusters to 3 (that's K)
+kclust <- kmeans(income_scaled, centers = 3)
+kclust$centers
+
+```
+
+```{r}
+glance(kclust)
+```
+
+
+##Add Clusters to original dataset
+```{r}
+incomek <- augment(kclust,income_scaled)
+head(incomek)
+```
+
+##Visualize Clusters
+```{r}
+#what do these mean?
+incomek %>% 
+  pivot_longer(c(age, fnlwgt, `education-num`),names_to = "feature") %>% 
+  ggplot(aes(value, fill=.cluster))+
+  geom_density(alpha=0.3)+
+  facet_wrap(~feature)
+
+incomek %>% 
+  pivot_longer(c(`capital-gain`,`capital-loss`),names_to = "feature") %>% 
+  ggplot(aes(value, fill=.cluster))+
+  geom_density(alpha=0.3)+
+  facet_wrap(~feature)
+
+incomek %>% 
+  pivot_longer(c(`hours-per-week`,workclass_Private),names_to = "feature") %>% 
+  ggplot(aes(value, fill=.cluster))+
+  geom_density(alpha=0.3)+
+  facet_wrap(~feature)
+
+incomek %>% 
+  pivot_longer(c(`hours-per-week`,income_above_50k),names_to = "feature") %>% 
+  ggplot(aes(value, fill=.cluster))+
+  geom_density(alpha=0.3)+
+  facet_wrap(~feature)
+
+```
+
+##Try different numbers of clusters
+```{r}
+kclusts <- tibble(k = 1:9) %>%
+  mutate(
+    kclust = map(k, ~kmeans(income_scaled, .x)),
+    glanced = map(kclust, glance),
+    augmented = map(kclust, augment, income_scaled)
+  )
+
+
+```
+
+##Plot the different clusters on two axes
+```{r}
+assignments <- kclusts %>% 
+  unnest(augmented)
+
+#changed from price points from lecture
+ggplot(assignments, aes(`hours-per-week`, `education-num`)) +
+  geom_point(aes(color = .cluster), alpha=0.3) + 
+  facet_wrap(~ k)
+```
+
+##Look at improvement in within-cluster error
+```{r}
+#can still look for elbow (looks like about 5 or 6)
+clusterings <- kclusts %>%
+  unnest(glanced, .drop = TRUE)
+
+ggplot(clusterings, aes(k, tot.withinss)) +
+  geom_line()
+```
+
+
+```{r}
+# Run k-means with the optimal number of clusters
+optimal_k <- 8
+kclust_optimal <- kmeans(income_scaled, centers = optimal_k)
+
+# Check the cluster centroids
+kclust_optimal$centers
+
+```
+
+```{r}
+# Run k-means with 8 clusters
+kclust <- kmeans(income_scaled, centers = 8)
+
+# Print the cluster centers
+print(kclust$centers)
+
+```
+
+
+
+* What are some key insights you found through your analysis?
+
+Please remember: a statement like "PC2 is not a meaningful predictor for our modeling problem" is a great insight; sometimes things don't work!
+
+10 pts PCA
+
+* analysis and interpretation of factor loadings
+* discussion of scree plot and/or analysis of some density plots of PCs
+* meaningful interpretation / discussion of conclusions 
+
+10 pts k-means
+
+* discussion for choosing number of clusters
+* analysis of cluster centers
+* bivariate chart(s) against meaningful variables and/or analysis of density plots
+* meaningful interpretation / discussion of conclusions 
+
+10 pts supervised learning
+
+* feature engineering / selection, whether with PCA or otherwise
+* interpretation of variable importance, coefficients if applicable
+* justification of choice of metric
+* discussion of choice or tuning of hyperparameters, if any
+* meaningful discussion of predictive power and conclusions from model
+
+Please be prepared to 
+
+* Submit your Rmd + compiled html or pdf, *and*
+* Present your findings to the class in a compelling way, speaking for 10 minutes or so. You don't need to cover everything in your analysis that you submit to me, focus on the fun / interesting / compelling highlights or challenges.
+
+
+```{r}
+
+```
+
