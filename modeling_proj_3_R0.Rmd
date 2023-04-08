@@ -30,6 +30,8 @@ income = read_csv("openml_1590.csv", na=c("?")) %>%
   select(-class) %>%
   dummy_cols(remove_selected_columns = T)
 
+income$income_above_50k = as.factor(income$income_above_50k)
+
 View(income)
 
 ```
@@ -55,20 +57,22 @@ n_components <- min(which(cumulative_proportion >= 0.5))
 cat("The number of principal components needed to explain 50% of the variation is", n_components)
 
 ```
-
+**Question:**Determine how many principal components are needed to explain half the variation
 **Answer:** The number of principal components needed to explain 50% of the variation is 37
 
 
-* Can you give some interpretation of the principal components?
+**Question:** Can you give some interpretation of the principal components?
 # Viewing the loadings of each principal component. Loadings allow us to see the individual contribution of each predictor variable to each principal component.
 ```{r}
 loadings <- rownames_to_column(as.data.frame(pr_income$rotation)) %>%
 select(1:6) %>%
 filter(abs(PC1) >= 0.25 | abs(PC2) >= 0.25 | abs(PC3) >= 0.25 | abs(PC4) >= 0.25 | abs(PC5) >= 0.25)
 
-```
+loadings
 
-**Answer:**pc1=Married-Male, pc2=Educated-Mexican, pc3=White-American, PC4=Mature-Single/divorced-Female, pc5=Black-American
+```
+**Question:**Can you give some interpretation of the principal components?
+**Answer:**pc1=Married-Male, pc2=Educated-Professional-Mexican, pc3=White-American-With_child, PC4=Mature-Single-Female, pc5=Black-Professional-American
 
 
 * Look at the scree plot. How many PCs would you choose based on that?
@@ -76,95 +80,96 @@ filter(abs(PC1) >= 0.25 | abs(PC2) >= 0.25 | abs(PC3) >= 0.25 | abs(PC4) >= 0.25
 screeplot(pr_income, type = "lines")
 
 ```
+**Question:**Look at the scree plot. How many PCs would you choose based on that?
 **Answer:** We would choose five PCs since it appears as though that is a good representation of the 'elbow'.
 
 
-* Are the first few Principal Components good predictors of income_above_50k?
-# "To do this, you can use the predict() function in R. This function will take a princomp object and a variable as input and return a vector of predicted values for the variable. You can then use the summary() function to get information about the accuracy of the predictions. The rmse attribute of the summary object contains the root mean squared error of the predictions. This can be used to assess how well the principal components predict the variable."
+## Are the first few Principal Components good predictors of income_above_50k?
+### "To do this, you can use the predict() function in R. This function will take a princomp object and a variable as input and return a vector of predicted values for the variable. You can then use the summary() function to get information about the accuracy of the predictions. The rmse attribute of the summary object contains the root mean squared error of the predictions. This can be used to assess how well the principal components predict the variable."
 ```{r}
-
+# Add income above 50k back into the data and name principal components
 prc <- bind_cols(select(income,income_above_50k),as.data.frame(pr_income$x)) %>%
-select(1:5)
+select(1:6) %>% 
+  rename(Married_Male = PC1) %>% 
+  rename(Educated_Professional_Mexican = PC2) %>% 
+  rename(White_American_With_child = PC3) %>% 
+  rename(Mature_Single_Female = PC4) %>% 
+  rename(Black_Professional_American = PC5)
 
+```
+
+
+# Density of different components by income (Factors 1&2)
+```{r}
+prc %>%
+  select(income_above_50k, Married_Male, Educated_Professional_Mexican) %>%
+  pivot_longer(cols = -income_above_50k,names_to = "component",values_to = "loading") %>%
+ggplot(aes(loading, fill=income_above_50k))+
+geom_density(alpha=0.5)+
+facet_grid(.~component)
+
+```
+
+# Density of different components by income (Factors 3&4)
+```{r}
+prc %>%
+  select(income_above_50k, White_American_With_child, Mature_Single_Female) %>%
+  pivot_longer(cols = -income_above_50k,names_to = "component",values_to = "loading") %>%
+ggplot(aes(loading, fill=income_above_50k))+
+geom_density(alpha=0.5)+
+facet_grid(.~component)
+
+```
+
+# Density of different components by income (Factors 4&5)
+```{r}
+prc %>%
+  select(income_above_50k, Mature_Single_Female, Black_Professional_American) %>%
+  pivot_longer(cols = -income_above_50k,names_to = "component",values_to = "loading") %>%
+ggplot(aes(loading, fill=income_above_50k))+
+geom_density(alpha=0.5)+
+facet_grid(.~component)
+
+```
+# Use these 5 factors for prediction
+```{r}
 fit <- train(income_above_50k ~ .,
              data = prc,
              method = "naive_bayes",
-             metric = "accuracy",
              trControl = trainControl(method = "cv"))
 
-confusionMatrix(predict(fit, prc),factor(prc$variety))
+
+confusionMatrix(predict(fit, prc),factor(prc$income_above_50k))
+
 ```
+**Question:**Are the first few Principal Components good predictors of income_above_50k?
+**Answer:**With 80% accuracy we can say that we are somewhat accurate in predicting if income is above $50k. When reviewing the truth matrix:
+Prediction FALSE  TRUE
+     FALSE 29423  4384
+     TRUE   4591  6824
+we can see that we are good at predicting true negatives, however predicting true positives are not as good.
 
 
-
-
-
-
-
+**Question:** How well can you predict income_above_50k using the first 5 or 6 principal components? How about only the first 2?
 ```{r}
-
-# Load the dataset
-income <- read.csv("income.csv")
-
-# Calculate the principal components
-pca <- prcomp(income)
-
-# Determine how many principal components are needed to explain half the variation
-n <- which.min(pca$sdev) - 1
-
-# Provide some interpretation of the principal components
-loadings <- pca$loadings
-
-# Decide if the first few principal components  are good predictors of the 'income_above_50k' variable
-pred <- predict(pr_income, income$income_above_50k)
-summary(pred)
-
-# Determine how well we can predict the 'income_above_50k' variable using the first five or six principal components and just the first two
-pred5 <- predict(pca, income$income_above_50k, ncomp=5)
-summary(pred5)
-pred2 <- predict(pca, income$income_above_50k, ncomp=2)
-summary(pred2)
+fit <- train(income_above_50k ~ Married_Male+Educated_Professional_Mexican,
+             data = prc,
+             method = "naive_bayes",
+             trControl = trainControl(method = "cv"))
 
 
-
-pred <- predict(pca, income$income_above_50k)
-summary(pred)
-
-
-
-set.seed(555)
-
-# control <- trainControl(method = "cv", number = 5)
-# 
-# income_index <- createDataPartition(income$income_above_50k, p = 0.80, list = FALSE)
-# 
-# train <- income[ income_index, ]
-# test <- income[-income_index, ]
-# 
-# fit <- train(income ~ .,
-#              data = train,
-#              trControl = control,
-#              method = "rf")
-
-formula <- as.formula("income_above_50k ~ PC1 + PC2")
-
-# Fit a logistic regression model using the first two principal components
-model <- train(formula,
-               data = pr_income$rotation,
-               method = "glmnet",
-               family = "binomial",
-               trControl = trainControl(method = "cv"))
+confusionMatrix(predict(fit, prc),factor(prc$income_above_50k))
 
 ```
-**Answer:** ..............
+**Question:** How well can you predict income_above_50k using the first 5 or 6 principal components? How about only the first 2?
+**Answer:**For the first five or six principals we saw above that we are somewhat accurate in predicting if income is above \$50k. For the first two principal components we can see that we have an 81% accuracy, which means we are somewhat accurate in predicting if income is above \$50k.  When reviewing the truth matrix:
+Prediction FALSE  TRUE
+     FALSE 30729  5337
+     TRUE   3285  5871
+we can see that we are slightly better at predicting true negatives, however predicting true positives are slightly better with the first five principal components.
 
 
-* How well can you predict income_above_50k using the first 5 or 6 principal components? How about only the first 2?
-```{r}
-
-```
-
-
+#K-means
 * Can you gain any insights into the data based on k-means clustering? 
 ```{r}
 
