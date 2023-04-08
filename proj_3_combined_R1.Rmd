@@ -22,9 +22,9 @@ library(fastDummies)
 library(randomForest)
 # https://www.openml.org/d/1590
 
-raw_income = read_csv("openml_1590.csv", na=c("?"))
+raw_income = read_csv("https://raw.githubusercontent.com/jessedebolt/DATA505-ML-Project_3/main/openml_1590.csv", na=c("?"))
 
-income = read_csv("openml_1590.csv", na=c("?")) %>%
+income = read_csv("https://raw.githubusercontent.com/jessedebolt/DATA505-ML-Project_3/main/openml_1590.csv", na=c("?")) %>%
   drop_na() %>%
   mutate(income_above_50k = class==">50K") %>%
   select(-class) %>%
@@ -32,7 +32,7 @@ income = read_csv("openml_1590.csv", na=c("?")) %>%
 
 income$income_above_50k = as.factor(income$income_above_50k)
 
-View(income)
+#View(income)
 
 ```
 
@@ -169,24 +169,114 @@ Prediction FALSE  TRUE
 we can see that we are slightly better at predicting true negatives, however predicting true positives are slightly better with the first five principal components.
 
 
-#K-means
-* Can you gain any insights into the data based on k-means clustering? 
+##preprocessing before K-means clustering
 ```{r}
+#preprocessing data
+income_scaled <- income %>% 
+    mutate(age=scale(age), fnlwgt=scale(fnlwgt), `education-num`=scale(`education-num`), `capital-gain`=scale(`capital-gain`), `capital-loss`=scale(`capital-loss`), `hours-per-week`=scale(`hours-per-week`))
+```
+
+
+##Basic K-means clustering
+```{r}
+#setting # of clusters to 3 (that's K)
+kclust <- kmeans(income_scaled, centers = 3)
+kclust$centers
+
+```
+
+```{r}
+glance(kclust)
+```
+
+
+##Add Clusters to original dataset
+```{r}
+incomek <- augment(kclust,income_scaled)
+head(incomek)
+```
+
+##Visualize Clusters
+```{r}
+#what do these mean?
+incomek %>% 
+  pivot_longer(c(age, fnlwgt, `education-num`),names_to = "feature") %>% 
+  ggplot(aes(value, fill=.cluster))+
+  geom_density(alpha=0.3)+
+  facet_wrap(~feature)
+
+incomek %>% 
+  pivot_longer(c(`capital-gain`,`capital-loss`),names_to = "feature") %>% 
+  ggplot(aes(value, fill=.cluster))+
+  geom_density(alpha=0.3)+
+  facet_wrap(~feature)
+
+incomek %>% 
+  pivot_longer(c(`hours-per-week`,workclass_Private),names_to = "feature") %>% 
+  ggplot(aes(value, fill=.cluster))+
+  geom_density(alpha=0.3)+
+  facet_wrap(~feature)
+
+incomek %>% 
+  pivot_longer(c(`hours-per-week`,income_above_50k),names_to = "feature") %>% 
+  ggplot(aes(value, fill=.cluster))+
+  geom_density(alpha=0.3)+
+  facet_wrap(~feature)
+
+```
+
+##Try different numbers of clusters
+```{r}
+kclusts <- tibble(k = 1:9) %>%
+  mutate(
+    kclust = map(k, ~kmeans(income_scaled, .x)),
+    glanced = map(kclust, glance),
+    augmented = map(kclust, augment, income_scaled)
+  )
 
 
 ```
 
+##Plot the different clusters on two axes
+```{r}
+assignments <- kclusts %>% 
+  unnest(augmented)
+
+#changed from price points from lecture
+ggplot(assignments, aes(`hours-per-week`, `education-num`)) +
+  geom_point(aes(color = .cluster), alpha=0.3) + 
+  facet_wrap(~ k)
+```
+
+##Look at improvement in within-cluster error
+```{r}
+#can still look for elbow (looks like about 5 or 6)
+clusterings <- kclusts %>%
+  unnest(glanced, .drop = TRUE)
+
+ggplot(clusterings, aes(k, tot.withinss)) +
+  geom_line()
+```
 
 
-* Can you visualize and interpret some or all of your clusters?
+```{r}
+# Run k-means with the optimal number of clusters
+optimal_k <- 8
+kclust_optimal <- kmeans(income_scaled, centers = optimal_k)
 
+# Check the cluster centroids
+kclust_optimal$centers
 
+```
 
-* Using any and all techniques we have learned, build the best predictive model for income_above_50k that you can. What are your best features? What model did you use? What interpretations can you draw?
+```{r}
+# Run k-means with 8 clusters
+kclust <- kmeans(income_scaled, centers = 8)
 
+# Print the cluster centers
+print(kclust$centers)
 
-
-* What metric can you use to assess model performance? Why is that a good choice of metric in this case?
+```
 
 
 
