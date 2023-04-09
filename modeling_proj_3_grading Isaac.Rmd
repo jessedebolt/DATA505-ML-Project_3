@@ -275,6 +275,23 @@ Please be prepared to
 # Replace 'Income' with the actual column name in your dataset
 income$income_above_50k <- as.numeric(factor(income$income_above_50k, levels = unique(income$income_above_50k))) - 1
 
+# Display basic information about the dataset
+str(income)
+
+# Set the figure size for the plots
+library(ggplot2)
+options(repr.plot.width = 20, repr.plot.height = 12)
+
+# Histograms for selected columns
+hist_cols <- c("age", "fnlwgt", "education-num", "capital-gain", "capital-loss", "hours-per-week")
+par(mfrow=c(2, 3))
+for (col in hist_cols) {
+  hist(income[[col]], main=col, xlab=col, col="lightblue")
+}
+
+```
+
+
 ####Correlation Matrix Heatmap
 ```{r}
 library(ggcorrplot)
