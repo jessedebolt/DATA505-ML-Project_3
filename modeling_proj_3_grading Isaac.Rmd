@@ -269,9 +269,71 @@ Please be prepared to
 
 
 
-
+##EDA
 ```{r}
+
+# Replace 'Income' with the actual column name in your dataset
+income$income_above_50k <- as.numeric(factor(income$income_above_50k, levels = unique(income$income_above_50k))) - 1
+
+####Correlation Matrix Heatmap
+```{r}
+library(ggcorrplot)
+
+# Select the columns you want to include in the correlation matrix
+selected_columns <- c("age", "fnlwgt", "education-num", "capital-gain", "capital-loss", "hours-per-week", "income_above_50k")
+
+# Calculate the correlation matrix for the selected columns
+corr_matrix <- cor(income[, selected_columns])
+
+# Create a heatmap of the correlation matrix with correlation coefficients
+ggcorrplot(corr_matrix, lab = TRUE, lab_size = 4, tl.cex = 12, tl.col = "black", tl.srt = 45)
 
 
 ```
 
+##Bucket Age
+```{r}
+# Load the required packages
+library(ggplot2)
+library(dplyr)
+
+# Bin the 'age' column
+income <- income %>%
+  mutate(age_group = case_when(
+    age >= 0 & age <= 25 ~ "young",
+    age > 25 & age <= 65 ~ "prime",
+    age > 65 & age <= 100 ~ "retired"
+  ))
+
+# Create the count plot with 'income_above_50k' as the hue
+ggplot(income, aes(x = age_group, fill = as.factor(income_above_50k))) +
+  geom_bar(position = "dodge") +
+  labs(x = "Age Group", y = "Count", fill = "Income Above 50K") +
+  theme_minimal()
+
+```
+
+##
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Create 'Capital Diff' column and remove 'Capital Gain' and 'Capital Loss' columns
+income <- income %>%
+  mutate(capital_diff = `capital-gain` - `capital-loss`) %>%
+  select(-`capital-gain`, -`capital-loss`)
+
+# Bin the 'Capital Diff' column
+income <- income %>%
+  mutate(capital_diff = case_when(
+    capital_diff >= -5000 & capital_diff <= 5000 ~ "Minor",
+    capital_diff > 5000 & capital_diff <= 100000 ~ "Major"
+  ))
+
+# Create the count plot with 'Income' as the hue
+ggplot(income, aes(x = capital_diff, fill = income_above_50k)) +
+  geom_bar(position = "dodge") +
+  labs(x = "Capital Diff", y = "Count", fill = "Income") +
+  theme_minimal()
+
+```
