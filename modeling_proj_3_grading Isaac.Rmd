@@ -147,7 +147,7 @@ ggplot(assignments, aes(`hours-per-week`, `education-num`)) +
 
 ##Look at improvement in within-cluster error
 ```{r}
-#can still look for elbow (looks like about 5 or 6)
+#can still look for elbow (looks like about 7)
 clusterings <- kclusts %>%
   unnest(glanced, .drop = TRUE)
 
@@ -158,7 +158,7 @@ ggplot(clusterings, aes(k, tot.withinss)) +
 
 ```{r}
 # Run k-means with the optimal number of clusters
-optimal_k <- 8
+optimal_k <- 7
 kclust_optimal <- kmeans(income_scaled, centers = optimal_k)
 
 # Check the cluster centroids
@@ -167,8 +167,8 @@ kclust_optimal$centers
 ```
 
 ```{r}
-# Run k-means with 8 clusters
-kclust <- kmeans(income_scaled, centers = 8)
+# Run k-means with 7 clusters
+kclust <- kmeans(income_scaled, centers = 7)
 
 # Print the cluster centers
 print(kclust$centers)
@@ -266,3 +266,12 @@ Please be prepared to
 
 * Submit your Rmd + compiled html or pdf, *and*
 * Present your findings to the class in a compelling way, speaking for 10 minutes or so. You don't need to cover everything in your analysis that you submit to me, focus on the fun / interesting / compelling highlights or challenges.
+
+
+
+
+```{r}
+
+
+```
+
