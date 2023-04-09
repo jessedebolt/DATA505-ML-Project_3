@@ -353,4 +353,50 @@ ggplot(income, aes(x = capital_diff, fill = income_above_50k)) +
   labs(x = "Capital Diff", y = "Count", fill = "Income") +
   theme_minimal()
 
+#had error so ran this then ran it again
+#check if factor
+class(income$income_above_50k)
+
+# Convert 'income_above_50k' to a factor
+income$income_above_50k <- as.factor(income$income_above_50k)
 ```
+
+##Drop Columns
+```{r}
+income <- income %>% select(-fnlwgt)
+
+income <- income %>% select(-`workclass_Without-pay`)
+```
+
+##Bin Hours
+```{r}
+# Bin the 'Hours per Week' column
+income <- income %>%
+  mutate(hours_per_week = case_when(
+    `hours-per-week` >= 0 & `hours-per-week` <= 32 ~ "Part Time",
+    `hours-per-week` > 32 & `hours-per-week` <= 40 ~ "Full Time",
+    `hours-per-week` > 40 & `hours-per-week` <= 100 ~ "Overtime"
+  ))
+
+# Create the count plot with 'Income' as the hue
+ggplot(income, aes(x = hours_per_week, fill = income_above_50k)) +
+  geom_bar(position = "dodge") +
+  labs(x = "Hours per Week", y = "Count", fill = "Income") +
+  theme_minimal()
+
+```
+##Looking at Education
+```{r}
+
+ggplot(raw_income, aes(x = education, fill = class)) +
+  geom_bar(position = "dodge") +
+  labs(x = "Education", y = "Count", fill = "Income") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+##
+```{r}
+
+```
+
