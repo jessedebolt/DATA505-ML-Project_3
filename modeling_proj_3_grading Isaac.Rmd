@@ -505,17 +505,15 @@ ggplot(income2, aes(y = `native-country`, fill = as.factor(income_above_50k))) +
 ```
 ##testing
 ```{r}
-test <- income2 %>%
-  dummy_cols(remove_selected_columns = T)
+income2 <- income2 %>%
+    select(-c(`hours-per-week`, age))
 
-library(fastDummies)
+#what happened to capital_diff?
 
 # Create dummy variables for all categorical columns except 'income_above_50k'
 income2_dummies <- income2 %>%
   dummy_cols(select_columns = setdiff(names(income2), "income_above_50k"), remove_selected_columns = T)
 
-# View the dataset with dummy variables
-head(income2_dummies)
 
 
 ```
