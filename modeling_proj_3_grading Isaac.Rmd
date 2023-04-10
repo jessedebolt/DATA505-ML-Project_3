@@ -33,7 +33,7 @@ income = read_csv("./openml_1590.csv", na=c("?")) %>%
   select(-class) %>%
   dummy_cols(remove_selected_columns = T)
 
-#View(income)
+head(income)
 ```
 
 ## Some questions about the data
@@ -271,12 +271,19 @@ Please be prepared to
 
 ##EDA
 ```{r}
+#Load data
+raw_income = read_csv("./openml_1590.csv", na=c("?"))
+
+income2 = read_csv("./openml_1590.csv", na=c("?")) %>%
+  drop_na() %>%
+  mutate(income_above_50k = class==">50K") %>%
+  select(-class)
 
 # Replace 'Income' with the actual column name in your dataset
-income$income_above_50k <- as.numeric(factor(income$income_above_50k, levels = unique(income$income_above_50k))) - 1
+income2$income_above_50k <- as.numeric(factor(income2$income_above_50k, levels = unique(income2$income_above_50k))) - 1
 
 # Display basic information about the dataset
-str(income)
+str(income2)
 
 # Set the figure size for the plots
 library(ggplot2)
@@ -286,7 +293,7 @@ options(repr.plot.width = 20, repr.plot.height = 12)
 hist_cols <- c("age", "fnlwgt", "education-num", "capital-gain", "capital-loss", "hours-per-week")
 par(mfrow=c(2, 3))
 for (col in hist_cols) {
-  hist(income[[col]], main=col, xlab=col, col="lightblue")
+  hist(income2[[col]], main=col, xlab=col, col="lightblue")
 }
 
 ```
@@ -300,7 +307,7 @@ library(ggcorrplot)
 selected_columns <- c("age", "fnlwgt", "education-num", "capital-gain", "capital-loss", "hours-per-week", "income_above_50k")
 
 # Calculate the correlation matrix for the selected columns
-corr_matrix <- cor(income[, selected_columns])
+corr_matrix <- cor(income2[, selected_columns])
 
 # Create a heatmap of the correlation matrix with correlation coefficients
 ggcorrplot(corr_matrix, lab = TRUE, lab_size = 4, tl.cex = 12, tl.col = "black", tl.srt = 45)
@@ -310,20 +317,22 @@ ggcorrplot(corr_matrix, lab = TRUE, lab_size = 4, tl.cex = 12, tl.col = "black",
 
 ##Bucket Age
 ```{r}
-# Load the required packages
 library(ggplot2)
 library(dplyr)
 
 # Bin the 'age' column
-income <- income %>%
+income2 <- income2 %>%
   mutate(age_group = case_when(
     age >= 0 & age <= 25 ~ "young",
     age > 25 & age <= 65 ~ "prime",
     age > 65 & age <= 100 ~ "retired"
   ))
 
+# Reorder the age_group factor levels
+income2$age_group <- factor(income2$age_group, levels = c("young", "prime", "retired"))
+
 # Create the count plot with 'income_above_50k' as the hue
-ggplot(income, aes(x = age_group, fill = as.factor(income_above_50k))) +
+ggplot(income2, aes(x = age_group, fill = as.factor(income_above_50k))) +
   geom_bar(position = "dodge") +
   labs(x = "Age Group", y = "Count", fill = "Income Above 50K") +
   theme_minimal()
@@ -335,51 +344,62 @@ ggplot(income, aes(x = age_group, fill = as.factor(income_above_50k))) +
 library(dplyr)
 library(ggplot2)
 
+#had error so ran this then ran it again
+#check if factor
+class(income2$income_above_50k)
+
+# Convert 'income_above_50k' to a factor
+income2$income_above_50k <- as.factor(income2$income_above_50k)
+
 # Create 'Capital Diff' column and remove 'Capital Gain' and 'Capital Loss' columns
-income <- income %>%
+income2 <- income2 %>%
   mutate(capital_diff = `capital-gain` - `capital-loss`) %>%
   select(-`capital-gain`, -`capital-loss`)
 
 # Bin the 'Capital Diff' column
-income <- income %>%
+income2 <- income2 %>%
   mutate(capital_diff = case_when(
     capital_diff >= -5000 & capital_diff <= 5000 ~ "Minor",
     capital_diff > 5000 & capital_diff <= 100000 ~ "Major"
   ))
 
 # Create the count plot with 'Income' as the hue
-ggplot(income, aes(x = capital_diff, fill = income_above_50k)) +
+ggplot(income2, aes(x = capital_diff, fill = income_above_50k)) +
   geom_bar(position = "dodge") +
   labs(x = "Capital Diff", y = "Count", fill = "Income") +
   theme_minimal()
 
-#had error so ran this then ran it again
-#check if factor
-class(income$income_above_50k)
-
-# Convert 'income_above_50k' to a factor
-income$income_above_50k <- as.factor(income$income_above_50k)
 ```
 
 ##Drop Columns
 ```{r}
-income <- income %>% select(-fnlwgt)
+income2 <- income2 %>% select(-fnlwgt)
 
-income <- income %>% select(-`workclass_Without-pay`)
+#income2 <- income2 %>% select(-`workclass_Without-pay`)
+
+unique(income2$workclass)
+
+income2 <- income2 %>%
+  filter(workclass != "Without-pay")
+
 ```
 
 ##Bin Hours
 ```{r}
 # Bin the 'Hours per Week' column
-income <- income %>%
+income2 <- income2 %>%
   mutate(hours_per_week = case_when(
-    `hours-per-week` >= 0 & `hours-per-week` <= 32 ~ "Part Time",
-    `hours-per-week` > 32 & `hours-per-week` <= 40 ~ "Full Time",
-    `hours-per-week` > 40 & `hours-per-week` <= 100 ~ "Overtime"
+    `hours-per-week` >= 0 & `hours-per-week` <= 32 ~ "part_time",
+    `hours-per-week` > 32 & `hours-per-week` <= 40 ~ "full_time",
+    `hours-per-week` > 40 & `hours-per-week` <= 100 ~ "overtime"
   ))
 
+#Reorder hours per week
+income2$hours_per_week <- factor(income2$hours_per_week, levels = c("part_time", "full_time", "overtime"))
+
+
 # Create the count plot with 'Income' as the hue
-ggplot(income, aes(x = hours_per_week, fill = income_above_50k)) +
+ggplot(income2, aes(x = hours_per_week, fill = income_above_50k)) +
   geom_bar(position = "dodge") +
   labs(x = "Hours per Week", y = "Count", fill = "Income") +
   theme_minimal()
@@ -395,8 +415,108 @@ ggplot(raw_income, aes(x = education, fill = class)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
-##
+##Education same as education-num
 ```{r}
+income2 %>%
+  distinct(education, `education-num`) %>%
+  arrange(`education-num`) %>%
+  mutate(display = paste0("For ", education, ", the Education Number is ", `education-num`)) %>%
+  pull(display) %>%
+  print()
+
+```
+##Final Education counts
+```{r}
+income2 <- income2 %>%
+  select(-`education-num`) %>%
+  mutate(education = recode(education,
+                            "11th" = "School",
+                            "9th" = "School",
+                            "7th-8th" = "School",
+                            "5th-6th" = "School",
+                            "10th" = "School",
+                            "1st-4th" = "School",
+                            "Preschool" = "School",
+                            "12th" = "School"
+                            ))
+
+education_counts <- income2 %>%
+  count(education) %>%
+  arrange(desc(n))
+
+education_counts
+
+```
+##Occupation
+```{r}
+ggplot(income2, aes(x = occupation, fill = as.factor(income_above_50k))) +
+  geom_bar(position = "dodge") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(x = "Occupation", y = "Count", fill = "Income Above 50K")
+
+
+```
+##Race
+```{r}
+ggplot(income2, aes(x = race, fill = as.factor(income_above_50k))) +
+  geom_bar(position = "dodge") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  labs(x = "Race", y = "Count", fill = "Income Above 50K")
+
+
+unique(income2$race)
+
+income2 <- income2 %>%
+  mutate(race = recode(race,
+                       "Black" = "Other",
+                       "Asian-Pac-Islander" = "Other",
+                       "Amer-Indian-Eskimo" = "Other",
+                       "Other" = "Other"
+                       ))
+```
+
+##Sex vs Income
+```{r}
+ggplot(income2, aes(x = sex, fill = as.factor(income_above_50k))) +
+  geom_bar(position = "dodge") +
+  theme_minimal() +
+  labs(x = "Sex", y = "Count", fill = "Income Above 50K")
+
+```
+
+##Country
+```{r}
+#Count of adults from each country
+country_count <- table(income2$`native-country`)
+barplot(country_count, xlab = "Countries", ylab = "Count", main = "Total adults from each Country", las = 2)
+
+# Replace all countries except the first one with 'Other'
+countries <- unique(income2$`native-country`)
+income2$`native-country` <- ifelse(income2$`native-country` %in% countries[-1], "Other", income2$`native-country`)
+
+#Country vs Income
+ggplot(income2, aes(y = `native-country`, fill = as.factor(income_above_50k))) +
+  geom_bar(position = "dodge") +
+  theme_minimal() +
+  labs(y = "Country", x = "Count", fill = "Income Above 50K")
+
+```
+##testing
+```{r}
+test <- income2 %>%
+  dummy_cols(remove_selected_columns = T)
+
+library(fastDummies)
+
+# Create dummy variables for all categorical columns except 'income_above_50k'
+income2_dummies <- income2 %>%
+  dummy_cols(select_columns = setdiff(names(income2), "income_above_50k"), remove_selected_columns = T)
+
+# View the dataset with dummy variables
+head(income2_dummies)
+
 
 ```
 
