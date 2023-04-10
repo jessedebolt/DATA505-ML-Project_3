@@ -32,7 +32,7 @@ income = read_csv("openml_1590.csv", na=c("?")) %>%
 
 income$income_above_50k = as.factor(income$income_above_50k)
 
-View(income)
+head(income)
 
 ```
 
