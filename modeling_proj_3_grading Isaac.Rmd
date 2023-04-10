@@ -583,5 +583,29 @@ table(train$income_above_50k)
 # Check the distribution of the target variable in the test dataset
 table(test$income_above_50k)
 
+for (col in colnames(train)) {
+  if (is.factor(train[[col]])) {
+    cat("Column:", col, "\n")
+    cat("Factor levels:", levels(train[[col]]), "\n\n")
+  }
+}
+
+```
+##trying to fix #2 this ran but kappa sucks. I don't get it
+```{r}
+train$income_above_50k <- factor(train$income_above_50k, labels = c("Income_below_50k", "Income_above_50k"))
+test$income_above_50k <- factor(test$income_above_50k, labels = c("Income_below_50k", "Income_above_50k"))
+
+fit <- train(income_above_50k ~ .,
+             data = train, 
+             method = "rf",
+             ntree = 20, 
+             tuneLength = 3,
+             metric = "ROC",
+             trControl = ctrl)
+fit
+
+
+confusionMatrix(predict(fit, test),factor(test$income_above_50k))
 ```
 
