@@ -271,7 +271,10 @@ Please be prepared to
 
 ##EDA
 ```{r}
-#Load data
+library(ggcorrplot)
+library(ggplot2)
+library(dplyr)
+
 raw_income = read_csv("./openml_1590.csv", na=c("?"))
 
 income2 = read_csv("./openml_1590.csv", na=c("?")) %>%
@@ -279,10 +282,8 @@ income2 = read_csv("./openml_1590.csv", na=c("?")) %>%
   mutate(income_above_50k = class==">50K") %>%
   select(-class)
 
-# Replace 'Income' with the actual column name in your dataset
 income2$income_above_50k <- as.numeric(factor(income2$income_above_50k, levels = unique(income2$income_above_50k))) - 1
 
-# Display basic information about the dataset
 str(income2)
 
 # Set the figure size for the plots
@@ -301,7 +302,6 @@ for (col in hist_cols) {
 
 ####Correlation Matrix Heatmap
 ```{r}
-library(ggcorrplot)
 
 # Select the columns you want to include in the correlation matrix
 selected_columns <- c("age", "fnlwgt", "education-num", "capital-gain", "capital-loss", "hours-per-week", "income_above_50k")
@@ -317,8 +317,6 @@ ggcorrplot(corr_matrix, lab = TRUE, lab_size = 4, tl.cex = 12, tl.col = "black",
 
 ##Bucket Age
 ```{r}
-library(ggplot2)
-library(dplyr)
 
 # Bin the 'age' column
 income2 <- income2 %>%
@@ -326,7 +324,8 @@ income2 <- income2 %>%
     age >= 0 & age <= 25 ~ "young",
     age > 25 & age <= 65 ~ "prime",
     age > 65 & age <= 100 ~ "retired"
-  ))
+  )) %>%
+    select(-age)
 
 # Reorder the age_group factor levels
 income2$age_group <- factor(income2$age_group, levels = c("young", "prime", "retired"))
@@ -341,10 +340,7 @@ ggplot(income2, aes(x = age_group, fill = as.factor(income_above_50k))) +
 
 ##
 ```{r}
-library(dplyr)
-library(ggplot2)
 
-#had error so ran this then ran it again
 #check if factor
 class(income2$income_above_50k)
 
@@ -371,11 +367,9 @@ ggplot(income2, aes(x = capital_diff, fill = income_above_50k)) +
 
 ```
 
-##Drop Columns
+##Drop Columns and without pay
 ```{r}
 income2 <- income2 %>% select(-fnlwgt)
-
-#income2 <- income2 %>% select(-`workclass_Without-pay`)
 
 unique(income2$workclass)
 
@@ -386,19 +380,20 @@ income2 <- income2 %>%
 
 ##Bin Hours
 ```{r}
-# Bin the 'Hours per Week' column
+# Bin 'Hours per Week' column
 income2 <- income2 %>%
   mutate(hours_per_week = case_when(
     `hours-per-week` >= 0 & `hours-per-week` <= 32 ~ "part_time",
     `hours-per-week` > 32 & `hours-per-week` <= 40 ~ "full_time",
     `hours-per-week` > 40 & `hours-per-week` <= 100 ~ "overtime"
-  ))
+  )) %>%
+    select(-`hours-per-week`)
 
 #Reorder hours per week
 income2$hours_per_week <- factor(income2$hours_per_week, levels = c("part_time", "full_time", "overtime"))
 
 
-# Create the count plot with 'Income' as the hue
+# Create count plot with 'Income' as the hue
 ggplot(income2, aes(x = hours_per_week, fill = income_above_50k)) +
   geom_bar(position = "dodge") +
   labs(x = "Hours per Week", y = "Count", fill = "Income") +
@@ -449,12 +444,24 @@ education_counts
 ```
 ##Occupation
 ```{r}
-ggplot(income2, aes(x = occupation, fill = as.factor(income_above_50k))) +
+
+# Calculate the count of 'income_above_50k == 1' for each occupation
+occupation_order <- income2 %>%
+  filter(income_above_50k == 1) %>%
+  group_by(occupation) %>%
+  summarize(count = n()) %>%
+  arrange(-count) %>%
+  pull(occupation)
+
+# Reorder the 'occupation' factor levels based on the calculated order
+income2$occupation_ordered <- factor(income2$occupation, levels = occupation_order)
+
+# Create the bar plot
+ggplot(income2, aes(x = occupation_ordered, fill = as.factor(income_above_50k))) +
   geom_bar(position = "dodge") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(x = "Occupation", y = "Count", fill = "Income Above 50K")
-
 
 ```
 ##Race
@@ -503,18 +510,78 @@ ggplot(income2, aes(y = `native-country`, fill = as.factor(income_above_50k))) +
   labs(y = "Country", x = "Count", fill = "Income Above 50K")
 
 ```
-##testing
+##Create dummy variables
 ```{r}
-income2 <- income2 %>%
-    select(-c(`hours-per-week`, age))
 
-#what happened to capital_diff?
-
-# Create dummy variables for all categorical columns except 'income_above_50k'
 income2_dummies <- income2 %>%
   dummy_cols(select_columns = setdiff(names(income2), "income_above_50k"), remove_selected_columns = T)
 
+```
 
+
+##model (not working. needs tweaking.)
+```{r}
+
+#income$income_above_50k <- as.factor(income$income_above_50k)
+income2_dummies$income_above_50k <- factor(income2_dummies$income_above_50k, levels = c(FALSE, TRUE), labels = c("Below_50K", "Above_50K"))
+
+# Replace all '-' with '_' in column names
+colnames(income2_dummies) <- gsub("-", "_", colnames(income2_dummies))
+
+# Check the updated column names
+colnames(income2_dummies)
+
+
+#timer
+start_time <- Sys.time()
+
+
+# specify the model to be used (i.e. KNN, Naive Bayes, decision tree, random forest, bagged trees) and the tuning parameters used
+ctrl <- trainControl(method = "cv", number = 3, classProbs = TRUE, summaryFunction = twoClassSummary)
+set.seed(504) 
+
+income_index <- createDataPartition(income2_dummies$income_above_50k, p = 0.80, list = FALSE)
+train <- income2_dummies[ income_index, ]
+test <- income2_dummies[-income_index, ]
+
+# example spec for rf
+fit <- train(income_above_50k ~ .,
+             data = train, 
+             method = "rf",
+             ntree = 20, 
+             tuneLength = 3,
+             metric = "ROC",
+             trControl = ctrl)
+
+fit
+
+confusionMatrix(predict(fit, test),factor(test$income_above_50k))
+
+
+#end timer
+end_time <- Sys.time()
+time_taken <- end_time - start_time
+print(time_taken)
+print(as.numeric(time_taken, units = "mins"))
+```
+#ignore this section-trying to fix model
+```{r}
+
+# Check the levels of the target variable in the training set
+print(levels(train$income_above_50k))
+
+# Update the levels of the target variable in the training set to valid R variable names
+train$income_above_50k <- factor(train$income_above_50k, labels = c("Income_below_50k", "Income_above_50k"))
+
+# Check the updated levels
+print(levels(train$income_above_50k))
+
+
+# Check the distribution of the target variable in the train dataset
+table(train$income_above_50k)
+
+# Check the distribution of the target variable in the test dataset
+table(test$income_above_50k)
 
 ```
 
