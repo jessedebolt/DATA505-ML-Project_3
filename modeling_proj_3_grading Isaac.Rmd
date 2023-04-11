@@ -110,10 +110,12 @@ We didn't see many differences in the distributions to identify which features w
 * What metric can you use to assess model performance? Why is that a good choice of metric in this case?
 
 Each of the different metrics have their strengths and weaknesses, so it's important that we understand those differences before choosing the one that fits our needs.
-Accuracy is a useful metric when the classes are balanced, but it can be misleading when dealing with imbalanced datasets.
-Kappa is a measure of agreement between predicted and observed categorical outcomes, accounting for the agreement that would occur by chance. Kappa is less sensitive to class imbalance compared to accuracy and is useful when the dataset is imbalanced which our dataset is unbalanced.
+Accuracy is a useful metric when the classes are balanced, but it can be misleading when dealing with imbalanced datasets which our dataset is.
+Kappa is a measure of agreement between predicted and observed categorical outcomes, accounting for the agreement that would occur by chance. Kappa is less sensitive to class imbalance compared to accuracy and is useful when the dataset is imbalanced.
 AUC-ROC (Area Under the Receiver Operating Characteristic Curve): AUC-ROC measures the ability of the model to distinguish between the classes. An AUC wth a value of 1 indicates a perfect model, and 0.5 indicates that the model is no better than random guessing. AUC-ROC is robust against class imbalance and is particularly useful for binary classification problems.
 The F1 score is the harmonic mean of precision and recall. It is useful when the class imbalance is present and when false positives and false negatives carry different costs, which not knowing how our model will be used not sure of what those costs would be.
+
+Overall, we decided to use kappa and accuracy for our measurement since our data is unbalanced.  Since we are just measuring income, it doesn't seem that any imprecision in the model has much of a cost.
 
 Then:
 10 pts k-means
@@ -239,7 +241,7 @@ print(kclust$centers)
 
 ```
 
-##Outliers? lof
+##Outliers lof
 ```{r}
 library(dbscan)
 lof <- lof(income, minPts = 10)
@@ -357,21 +359,6 @@ time_taken <- end_time - start_time
 print(time_taken)
 print(as.numeric(time_taken, units = "mins"))
 ```
-
-
-10 pts supervised learning
-
-* feature engineering / selection, whether with PCA or otherwise
-* interpretation of variable importance, coefficients if applicable
-* justification of choice of metric
-* discussion of choice or tuning of hyperparameters, if any
-* meaningful discussion of predictive power and conclusions from model
-
-Please be prepared to 
-
-* Submit your Rmd + compiled html or pdf, *and*
-* Present your findings to the class in a compelling way, speaking for 10 minutes or so. You don't need to cover everything in your analysis that you submit to me, focus on the fun / interesting / compelling highlights or challenges.
-
 
 
 ##EDA
@@ -632,7 +619,7 @@ income2_dummies <- income2 %>%
 
 
 ##model (not working. needs tweaking.)
-```{r}
+```{r setup, eval=FALSE, message=False, warning=FALSE}
 
 #income$income_above_50k <- as.factor(income$income_above_50k)
 #income2_dummies$income_above_50k <- factor(income2_dummies$income_above_50k, levels = c(FALSE, TRUE), labels = c("Below_50K", "Above_50K"))
@@ -677,7 +664,7 @@ print(time_taken)
 print(as.numeric(time_taken, units = "mins"))
 ```
 #ignore this section-trying to fix model
-```{r}
+```{r setup, eval=FALSE, message=False, warning=FALSE}
 
 # Check the levels of the target variable in the training set
 print(levels(train$income_above_50k))
@@ -703,7 +690,7 @@ for (col in colnames(train)) {
 }
 
 ```
-##trying to fix #2 this ran but kappa sucks. I don't get it
+##trying to fix #2 this ran but kappa is .37
 ```{r}
 train$income_above_50k <- factor(train$income_above_50k, labels = c("Income_below_50k", "Income_above_50k"))
 test$income_above_50k <- factor(test$income_above_50k, labels = c("Income_below_50k", "Income_above_50k"))
@@ -906,42 +893,42 @@ confusionMatrix(predict(fit_nb, test), factor(test$income_above_50k))
 
 #error
 # KNN
-fit_knn <- train(income_above_50k ~ .,
-                 data = train,
-                 method = "knn",
-                 tuneLength = 10,
-                 metric = "ROC",
-                 trControl = ctrl)
+#fit_knn <- train(income_above_50k ~ .,
+#                 data = train,
+#                 method = "knn",
+#                 tuneLength = 10,
+#                 metric = "ROC",
+#                 trControl = ctrl)
 
-fit_knn
+#fit_knn
 
-confusionMatrix(predict(fit_knn, test), factor(test$income_above_50k))
+#confusionMatrix(predict(fit_knn, test), factor(test$income_above_50k))
 
 #error
 # K-Nearest Neighbors (KNN) with data normalization
-fit_knn_normalized <- train(income_above_50k ~ .,
-                            data = train,
-                            method = "knn",
-                            preProcess = "normalize", # Normalize the data
-                            metric = "ROC",
-                            trControl = ctrl)
+#fit_knn_normalized <- train(income_above_50k ~ .,
+#                            data = train,
+#                            method = "knn",
+#                            preProcess = "normalize", # Normalize the data
+#                            metric = "ROC",
+#                            trControl = ctrl)
 
-fit_knn_normalized
+#fit_knn_normalized
 
-confusionMatrix(predict(fit_knn_normalized, test), factor(test$income_above_50k))
+#confusionMatrix(predict(fit_knn_normalized, test), #factor(test$income_above_50k))
 
 #error
-library(rpart)
+#library(rpart)
 # Decision Tree (CART)
-fit_cart <- train(income_above_50k ~ .,
-                  data = train,
-                  method = "rpart",
-                  metric = "ROC",
-                  trControl = ctrl)
+#fit_cart <- train(income_above_50k ~ .,
+#                  data = train,
+#                  method = "rpart",
+#                  metric = "ROC",
+#                  trControl = ctrl)
 
-fit_cart
+#fit_cart
 
-confusionMatrix(predict(fit_cart, test), factor(test$income_above_50k))
+#confusionMatrix(predict(fit_cart, test), factor(test$income_above_50k))
 
 
 # SVM Support Vector Machine
@@ -996,7 +983,7 @@ confusionMatrix(predict(fit_xgb, test), factor(test$income_above_50k))
 ```
 
 ##Multiple Accuracy measurements
-```{r}
+```{r setup, eval=FALSE, message=False, warning=FALSE}
 
 ctrl <- trainControl(method = "cv", number = 5, classProbs = TRUE, summaryFunction = defaultSummary)
 
@@ -1013,7 +1000,7 @@ summary(results, metric = "Accuracy")
 ```
 
 ##Multiple Kappa
-```{r}
+```{r setup, eval=FALSE, message=False, warning=FALSE}
 
 ctrl <- trainControl(method = "cv", number = 5, classProbs = TRUE, summaryFunction = defaultSummary)
 
@@ -1030,7 +1017,7 @@ summary(results, metric = "Kappa")
 ```
 
 ##Multiple AUC
-```{r}
+```{r setup, eval=FALSE, message=False, warning=FALSE}
 
 ctrl <- trainControl(method = "cv", number = 5, classProbs = TRUE, summaryFunction = twoClassSummary)
 
@@ -1060,7 +1047,7 @@ plot(myRoc)
 ```
 
 ##Multiple F1
-```{r}
+```{r setup, eval=FALSE, message=False, warning=FALSE}
 
 ctrl <- trainControl(method = "cv", number = 5, classProbs = TRUE, summaryFunction = prSummary)
 
