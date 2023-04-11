@@ -271,6 +271,8 @@ facet_grid(.~component)
 # Modeling
 ### Use these 5 factors for prediction
 ```{r}
+set.seed(555)
+
 fit <- train(income_above_50k ~ .,
              data = prc,
              method = "naive_bayes",
@@ -290,6 +292,8 @@ we can see that we are good at predicting true negatives, however predicting tru
 
 **Question:** How well can you predict income_above_50k using the first 5 or 6 principal components? How about only the first 2?
 ```{r}
+set.seed(555)
+
 fit <- train(income_above_50k ~ Married_Male+Educated_Professional_Mexican,
              data = prc,
              method = "naive_bayes",
@@ -308,4 +312,75 @@ we can see that we are slightly better at predicting true negatives, however pre
 
 
 
+### Creating a model with hand selected features based on principal components.
+```{r}
+income3 <- income2_dummies %>% 
+  select("income_above_50k", "sex_Male", "occupation_Prof-specialty", "education_School", "native-country_United-States", "marital-status_Married-civ-spouse", "education_Masters", "education_Bachelors",  "race_White", "occupation_ordered_Prof-specialty", "age_group_prime", "occupation_Exec-managerial", "occupation_ordered_Exec-managerial")
+
+```
+
+
+### Creating prc sets with larger selections
+```{r}
+prc10 <- bind_cols(select(income2_dummies,income_above_50k),as.data.frame(pr_income$x)) %>%
+select(1:11)
+
+prc25 <- bind_cols(select(income2_dummies,income_above_50k),as.data.frame(pr_income$x)) %>%
+select(1:26)
+
+prcAll <- bind_cols(select(income2_dummies,income_above_50k),as.data.frame(pr_income$x))
+
+```
+
+
+### Attempting gradiant boosting on hand selected features
+```{r}
+fit <- train(income_above_50k ~ .,
+             data = income3,
+             method = "gbm",
+             trControl = trainControl(method = "cv"))
+
+confusionMatrix(predict(fit, income3),factor(income3$income_above_50k))
+
+```
+
+
+#Overall Results:
+
+hand picked features (12) based on prc components:
+NB: kappa=.4743, Accuracy=.8228
+gbm: kappa=.4713, Accuracy=.8218
+
+
+prc with 2pc NB: kappa=.4935, Accuracy=.8235
+prc with 2pc KNN: kappa=.5659, Accuracy=.8478
+
+
+prc with 5pc NB: kappa=.4946, Accuracy=.8191
+prc with 5pc KNN: kappa=.5708, Accuracy=.8496
+
+prc with 10pc NB: kappa=.5103, Accuracy=.8200
+prc with 10pc KNN: kappa=.5837, Accuracy=.8541
+
+prc with 25pc NB: kappa=.5377, Accuracy=.8281
+prc with 25pc KNN: kappa=.5825, Accuracy=.8529
+
+prc with all 71pc KNN: kappa=.5895, Accuracy=.8549
+
+
+
+
+
+
+```{r}
+set.seed(555)
+
+fit <- train(income_above_50k ~ .,
+             data = prc25,
+             method = "knn",
+             trControl = trainControl(method = "cv"))
+
+
+confusionMatrix(predict(fit, prc25), factor(prc25$income_above_50k))
+```
 
