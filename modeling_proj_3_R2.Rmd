@@ -5,7 +5,6 @@ date: "2023-04-10"
 output: html_document
 ---
 
-# EDA
 ### Setup
 ```{r message=FALSE, warning=FALSE}
 library(tidyverse)
@@ -31,7 +30,7 @@ str(income2)
 
 ```
 
-
+# EDA
 ### Bucket Age
 ```{r}
 
@@ -48,7 +47,6 @@ income2 <- income2 %>%
 income2$age_group <- factor(income2$age_group, levels = c("young", "prime", "retired"))
 
 ```
-
 
 
 ### Bucket Capital gains/loss
@@ -171,10 +169,9 @@ income2_dummies <- income2 %>%
 
 ```
 
-## ----End EDA----
 
 #PCA
-###* Run PCA on the dataset.
+### Running PCA on the dataset.
 ```{r results='hide'}
 pr_income <- prcomp(x = select(income2_dummies, -income_above_50k), scale = T, center = T)
 
@@ -191,12 +188,8 @@ n_components <- min(which(cumulative_proportion >= 0.5))
 cat("The number of principal components needed to explain 50% of the variation is", n_components)
 
 ```
-**Question:**Determine how many principal components are needed to explain half the variation
-**Answer:** The number of principal components needed to explain 50% of the variation is 14
 
-
-**Question:** Can you give some interpretation of the principal components?
-### Viewing the loadings of each principal component. Loadings allow us to see the individual contribution of each predictor variable to each principal component.
+### Viewing the loadings of each principal component to see the individual contribution of each predictor variable to each principal component.
 ```{r}
 loadings <- rownames_to_column(as.data.frame(pr_income$rotation)) %>%
 select(1:6) %>%
@@ -205,22 +198,17 @@ filter(abs(PC1) >= 0.25 | abs(PC2) >= 0.25 | abs(PC3) >= 0.25 | abs(PC4) >= 0.25
 loadings
 
 ```
-**Question:**Can you give some interpretation of the principal components?
-**Answer:**pc1=Married-Male, pc2=Educated-Professional-Mexican, pc3=White-American-With_child, PC4=Mature-Single-Female, pc5=Black-Professional-American
 
 
-### * Look at the scree plot. How many PCs would you choose based on that?
+### Viewing the scree plot to determine how many PCs to choose?
 ```{r}
 screeplot(pr_income, type = "lines")
 
 ```
-**Question:**Look at the scree plot. How many PCs would you choose based on that?
-**Answer:** We would choose five PCs since it appears as though that is a good representation of the 'elbow'.
 
 
-### Are the first few Principal Components good predictors of income_above_50k?
+### Adding income above 50k back into the data and naming principal components
 ```{r}
-# Add income above 50k back into the data and name principal components
 prc <- bind_cols(select(income2_dummies,income_above_50k),as.data.frame(pr_income$x)) %>%
 select(1:6) %>% 
   rename(Married_Male = PC1) %>% 
@@ -269,7 +257,7 @@ facet_grid(.~component)
 ```
 
 # Modeling
-### Use these 5 factors for prediction
+### Use the top five factors for prediction
 ```{r}
 set.seed(555)
 
@@ -282,15 +270,9 @@ fit <- train(income_above_50k ~ .,
 confusionMatrix(predict(fit, prc),factor(prc$income_above_50k))
 
 ```
-**Question:**Are the first few Principal Components good predictors of income_above_50k?
-**Answer:**With 82% accuracy we can say that we are somewhat accurate in predicting if income is above $50k. When reviewing the truth matrix:
-Prediction     0     1
-         0 30574  4757
-         1  3421  6449
-we can see that we are good at predicting true negatives, however predicting true positives are not as good.
 
 
-**Question:** How well can you predict income_above_50k using the first 5 or 6 principal components? How about only the first 2?
+### Use the top two factors for prediction
 ```{r}
 set.seed(555)
 
@@ -303,14 +285,8 @@ fit <- train(income_above_50k ~ Married_Male+Educated_Professional_Mexican,
 confusionMatrix(predict(fit, prc),factor(prc$income_above_50k))
 
 ```
-**Question:** How well can you predict income_above_50k using the first 5 or 6 principal components? How about only the first 2?
-**Answer:**For the first five or six principals we saw above that we are somewhat accurate in predicting if income is above \$50k. For the first two principal components we can see that we have an 82% accuracy, which means we are somewhat accurate in predicting if income is above \$50k.  When reviewing the truth matrix:
-Prediction     0     1
-         0 31106  5087
-         1  2889  6119
-we can see that we are slightly better at predicting true negatives, however predicting true positives are slightly better with the first five principal components.
 
-
+# Further exploring with PCs and models
 
 ### Creating a model with hand selected features based on principal components.
 ```{r}
@@ -356,7 +332,7 @@ fit <- train(income_above_50k ~ .,
 
 confusionMatrix(predict(fit, prc25), factor(prc25$income_above_50k))
 ```
-
+Note: The above chunk was used for multiple models, changing out data and method, results were recorded below.
 
 #Overall Results:
 
@@ -407,4 +383,63 @@ accuracyPlot + kappaPlot + plot_annotation(
 )
 
 ```
+
+
+# Questions & Answers
+
+## Run PCA on the dataset. How many principal components do you need to explain half the variation? 
+#### Answer: The number of principal components needed to explain 50% of the variation is 14
+
+## Can you give some interpretation of the principal components?
+#### Answer:  
+pc1=Married-Male,  
+pc2=Educated-Professional-Mexican,  
+pc3=White-American-With_child,  
+PC4=Mature-Single-Female,  
+pc5=Black-Professional-American
+
+## Look at the scree plot. How many PCs would you choose based on that?
+#### Answer: We would choose five PCs since it appears as though that is a good representation of the ‘elbow’.
+
+## Are the first few Principal Components good predictors of income_above_50k?
+#### Answer: With 82% accuracy we can say that we are somewhat accurate in predicting if income is above $50k. When reviewing the truth matrix we can see that we are good at predicting true negatives, however predicting true positives are not as good.
+
+## How well can you predict income_above_50k using the first 5 or 6 principal components? How about only the first 2?
+#### Answer:For the first five or six principals we saw above that we are somewhat accurate in predicting if income is above $50k. For the first two principal components we can see that we have an 82% accuracy, which means we are somewhat accurate in predicting if income is above $50k. When reviewing the truth matrix we can see that we are slightly better at predicting true negatives, however predicting true positives are slightly better with the first five principal components.
+
+## Can you gain any insights into the data based on k-means clustering? 
+#### Answer:
+
+## Can you visualize and interpret some or all of your clusters?
+#### Answer:
+
+## Using any and all techniques we have learned, build the best predictive model for income_above_50k that you can. What are your best features? What model did you use? What interpretations can you draw?
+#### Answer:  
+
+## What metric can you use to assess model performance? Why is that a good choice of metric in this case?
+#### Answer: 
+
+## What are some key insights you found through your analysis?
+#### Answer: 
+
+
+# Grading
+
+10 pts PCA
+* analysis and interpretation of factor loadings
+* discussion of scree plot and/or analysis of some density plots of PCs
+* meaningful interpretation / discussion of conclusions 
+
+10 pts k-means
+* discussion for choosing number of clusters
+* analysis of cluster centers
+* bivariate chart(s) against meaningful variables and/or analysis of density plots
+* meaningful interpretation / discussion of conclusions 
+
+10 pts supervised learning
+* feature engineering / selection, whether with PCA or otherwise
+* interpretation of variable importance, coefficients if applicable
+* justification of choice of metric
+* discussion of choice or tuning of hyperparameters, if any
+* meaningful discussion of predictive power and conclusions from model
 
