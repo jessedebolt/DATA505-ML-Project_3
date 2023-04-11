@@ -716,12 +716,11 @@ occupation_counts
 ```
 ##Marital Status
 ```{r}
-#unique names for marital status
 unique(income3$`marital-status`)
 
-#bin marital status
+
 income3 <- income3 %>%
-  mutate(`marital_status` = recode(`marital-status`,
+  mutate(`maritalstatus` = recode(`marital-status`,
                             "Never-married" = "never",
                             "Married-civ-spouse" = "married",
                             "Widowed" = "not_married",
