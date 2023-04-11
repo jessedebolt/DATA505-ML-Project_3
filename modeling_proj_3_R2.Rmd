@@ -1,0 +1,445 @@
+---
+title: "Machine Learning Project 3"
+author: "Isaac Johnson & Jesse DeBolt"
+date: "2023-04-10"
+output: html_document
+---
+
+### Setup
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(ggcorrplot)
+library(ggplot2)
+library(dplyr)
+library(tidytext)
+library(caret)
+library(fastDummies)
+library(randomForest)
+library(broom)
+
+raw_income = read_csv("openml_1590.csv", na=c("?"))
+
+income2 = read_csv("openml_1590.csv", na=c("?")) %>%
+  drop_na() %>%
+  mutate(income_above_50k = class==">50K") %>%
+  select(-class)
+
+income2$income_above_50k <- as.numeric(factor(income2$income_above_50k, levels = unique(income2$income_above_50k))) - 1
+
+str(income2)
+
+```
+
+# EDA
+### Bucket Age
+```{r}
+
+# Bin the 'age' column
+income2 <- income2 %>%
+  mutate(age_group = case_when(
+    age >= 0 & age <= 25 ~ "young",
+    age > 25 & age <= 65 ~ "prime",
+    age > 65 & age <= 100 ~ "retired"
+  )) %>%
+    select(-age)
+
+# Reorder the age_group factor levels
+income2$age_group <- factor(income2$age_group, levels = c("young", "prime", "retired"))
+
+```
+
+
+### Bucket Capital gains/loss
+```{r}
+
+#check if factor
+class(income2$income_above_50k)
+
+# Convert 'income_above_50k' to a factor
+income2$income_above_50k <- as.factor(income2$income_above_50k)
+
+# Create 'Capital Diff' column and remove 'Capital Gain' and 'Capital Loss' columns
+income2 <- income2 %>%
+  mutate(capital_diff = `capital-gain` - `capital-loss`) %>%
+  select(-`capital-gain`, -`capital-loss`)
+
+# Bin the 'Capital Diff' column
+income2 <- income2 %>%
+  mutate(capital_diff = case_when(
+    capital_diff >= -5000 & capital_diff <= 5000 ~ "Minor",
+    capital_diff > 5000 & capital_diff <= 100000 ~ "Major"
+  ))
+
+```
+
+
+
+### Drop Columns and without pay
+```{r}
+income2 <- income2 %>% select(-fnlwgt)
+
+unique(income2$workclass)
+
+income2 <- income2 %>%
+  filter(workclass != "Without-pay")
+
+```
+
+
+### Bucket Hours
+```{r}
+# Bin 'Hours per Week' column
+income2 <- income2 %>%
+  mutate(hours_per_week = case_when(
+    `hours-per-week` >= 0 & `hours-per-week` <= 32 ~ "part_time",
+    `hours-per-week` > 32 & `hours-per-week` <= 40 ~ "full_time",
+    `hours-per-week` > 40 & `hours-per-week` <= 100 ~ "overtime"
+  )) %>%
+    select(-`hours-per-week`)
+
+#Reorder hours per week
+income2$hours_per_week <- factor(income2$hours_per_week, levels = c("part_time", "full_time", "overtime"))
+
+```
+
+
+### Bucket Education
+```{r}
+income2 <- income2 %>%
+  select(-`education-num`) %>%
+  mutate(education = recode(education,
+                            "11th" = "School",
+                            "9th" = "School",
+                            "7th-8th" = "School",
+                            "5th-6th" = "School",
+                            "10th" = "School",
+                            "1st-4th" = "School",
+                            "Preschool" = "School",
+                            "12th" = "School"
+                            ))
+
+```
+
+
+### Bucket Occupation
+```{r}
+
+# Calculate the count of 'income_above_50k == 1' for each occupation
+occupation_order <- income2 %>%
+  filter(income_above_50k == 1) %>%
+  group_by(occupation) %>%
+  summarize(count = n()) %>%
+  arrange(-count) %>%
+  pull(occupation)
+
+# Reorder the 'occupation' factor levels based on the calculated order
+income2$occupation_ordered <- factor(income2$occupation, levels = occupation_order)
+
+```
+
+
+### Bucket Race
+```{r}
+
+income2 <- income2 %>%
+  mutate(race = recode(race,
+                       "Black" = "Other",
+                       "Asian-Pac-Islander" = "Other",
+                       "Amer-Indian-Eskimo" = "Other",
+                       "Other" = "Other"
+                       ))
+```
+
+
+### Bucket Country
+```{r}
+
+# Replace all countries except the first one with 'Other'
+countries <- unique(income2$`native-country`)
+income2$`native-country` <- ifelse(income2$`native-country` %in% countries[-1], "Other", income2$`native-country`)
+
+```
+
+
+### Create dummy variables
+```{r}
+
+income2_dummies <- income2 %>%
+  dummy_cols(select_columns = setdiff(names(income2), "income_above_50k"), remove_selected_columns = T)
+
+```
+
+
+#PCA
+### Running PCA on the dataset.
+```{r results='hide'}
+pr_income <- prcomp(x = select(income2_dummies, -income_above_50k), scale = T, center = T)
+
+summary(pr_income)
+
+```
+
+### Determine how many principal components are needed to explain half the variation
+```{r}
+cumulative_proportion <- cumsum(pr_income$sdev^2 / sum(pr_income$sdev^2))
+
+n_components <- min(which(cumulative_proportion >= 0.5))
+
+cat("The number of principal components needed to explain 50% of the variation is", n_components)
+
+```
+
+### Viewing the loadings of each principal component to see the individual contribution of each predictor variable to each principal component.
+```{r}
+loadings <- rownames_to_column(as.data.frame(pr_income$rotation)) %>%
+select(1:6) %>%
+filter(abs(PC1) >= 0.25 | abs(PC2) >= 0.25 | abs(PC3) >= 0.25 | abs(PC4) >= 0.25 | abs(PC5) >= 0.25)
+
+loadings
+
+```
+
+
+### Viewing the scree plot to determine how many PCs to choose?
+```{r}
+screeplot(pr_income, type = "lines")
+
+```
+
+
+### Adding income above 50k back into the data and naming principal components
+```{r}
+prc <- bind_cols(select(income2_dummies,income_above_50k),as.data.frame(pr_income$x)) %>%
+select(1:6) %>% 
+  rename(Married_Male = PC1) %>% 
+  rename(Educated_Professional_Mexican = PC2) %>% 
+  rename(White_American_With_child = PC3) %>% 
+  rename(Mature_Single_Female = PC4) %>% 
+  rename(Black_Professional_American = PC5)
+
+```
+
+## Density Plots:
+
+### Density of different components by income (Factors 1&2)
+```{r}
+prc %>%
+  select(income_above_50k, Married_Male, Educated_Professional_Mexican) %>%
+  pivot_longer(cols = -income_above_50k,names_to = "component",values_to = "loading") %>%
+ggplot(aes(loading, fill=income_above_50k))+
+geom_density(alpha=0.5)+
+facet_grid(.~component)
+
+```
+
+
+### Density of different components by income (Factors 3&4)
+```{r}
+prc %>%
+  select(income_above_50k, White_American_With_child, Mature_Single_Female) %>%
+  pivot_longer(cols = -income_above_50k,names_to = "component",values_to = "loading") %>%
+ggplot(aes(loading, fill=income_above_50k))+
+geom_density(alpha=0.5)+
+facet_grid(.~component)
+
+```
+
+
+### Density of different components by income (Factors 4&5)
+```{r}
+prc %>%
+  select(income_above_50k, Mature_Single_Female, Black_Professional_American) %>%
+  pivot_longer(cols = -income_above_50k,names_to = "component",values_to = "loading") %>%
+ggplot(aes(loading, fill=income_above_50k))+
+geom_density(alpha=0.5)+
+facet_grid(.~component)
+
+```
+
+# Modeling
+### Use the top five factors for prediction
+```{r}
+set.seed(555)
+
+fit <- train(income_above_50k ~ .,
+             data = prc,
+             method = "naive_bayes",
+             trControl = trainControl(method = "cv"))
+
+
+confusionMatrix(predict(fit, prc),factor(prc$income_above_50k))
+
+```
+
+
+### Use the top two factors for prediction
+```{r}
+set.seed(555)
+
+fit <- train(income_above_50k ~ Married_Male+Educated_Professional_Mexican,
+             data = prc,
+             method = "naive_bayes",
+             trControl = trainControl(method = "cv"))
+
+
+confusionMatrix(predict(fit, prc),factor(prc$income_above_50k))
+
+```
+
+# Further exploring with PCs and models
+
+### Creating a model with hand selected features based on principal components.
+```{r}
+income3 <- income2_dummies %>% 
+  select("income_above_50k", "sex_Male", "occupation_Prof-specialty", "education_School", "native-country_United-States", "marital-status_Married-civ-spouse", "education_Masters", "education_Bachelors",  "race_White", "occupation_ordered_Prof-specialty", "age_group_prime", "occupation_Exec-managerial", "occupation_ordered_Exec-managerial")
+
+```
+
+
+### Creating prc sets with larger selections
+```{r}
+prc10 <- bind_cols(select(income2_dummies,income_above_50k),as.data.frame(pr_income$x)) %>%
+select(1:11)
+
+prc25 <- bind_cols(select(income2_dummies,income_above_50k),as.data.frame(pr_income$x)) %>%
+select(1:26)
+
+prcAll <- bind_cols(select(income2_dummies,income_above_50k),as.data.frame(pr_income$x))
+
+```
+
+
+### Attempting gradiant boosting on hand selected features
+```{r}
+fit <- train(income_above_50k ~ .,
+             data = income3,
+             method = "gbm",
+             trControl = trainControl(method = "cv"))
+
+confusionMatrix(predict(fit, income3),factor(income3$income_above_50k))
+
+```
+
+
+### Running various models
+```{r}
+set.seed(555)
+
+fit <- train(income_above_50k ~ .,
+             data = prc25,
+             method = "knn",
+             trControl = trainControl(method = "cv"))
+
+confusionMatrix(predict(fit, prc25), factor(prc25$income_above_50k))
+```
+Note: The above chunk was used for multiple models, changing out data and method, results were recorded below.
+
+#Overall Results:
+
+hand picked features (12) based on prc components:
+NB: kappa=.4743, Accuracy=.8228
+gbm: kappa=.4713, Accuracy=.8218
+
+
+prc with 2pc NB: kappa=.4935, Accuracy=.8235
+prc with 2pc KNN: kappa=.5659, Accuracy=.8478
+
+
+prc with 5pc NB: kappa=.4946, Accuracy=.8191
+prc with 5pc KNN: kappa=.5708, Accuracy=.8496
+
+prc with 10pc NB: kappa=.5103, Accuracy=.8200
+prc with 10pc KNN: kappa=.5837, Accuracy=.8541
+
+prc with 25pc NB: kappa=.5377, Accuracy=.8281
+prc with 25pc KNN: kappa=.5825, Accuracy=.8529
+
+prc with all 71pc KNN: kappa=.5895, Accuracy=.8549
+
+```{r}
+results <- read.csv('results.csv')
+
+accuracyPlot <- results %>% 
+ggplot(aes(x = X, y = Accuracy, fill = X)) +
+  geom_col() +
+  coord_flip() +
+  labs(x = "", y = "Accuracy") +
+  theme_minimal()+
+  theme(legend.position="none")
+
+kappaPlot <- results %>% 
+ggplot(aes(x = X, y = Kappa, fill = X)) +
+  geom_col() +
+  coord_flip() +
+  labs(x = "", y = "Kappa") +
+  theme_minimal()+
+  theme(legend.position="none")
+
+
+library(patchwork)
+
+accuracyPlot + kappaPlot + plot_annotation(
+  title = "Accuracy and Kappa results for various models"
+)
+
+```
+
+
+# Questions & Answers
+
+## Run PCA on the dataset. How many principal components do you need to explain half the variation? 
+#### Answer: The number of principal components needed to explain 50% of the variation is 14
+
+## Can you give some interpretation of the principal components?
+#### Answer:  
+pc1=Married-Male,  
+pc2=Educated-Professional-Mexican,  
+pc3=White-American-With_child,  
+PC4=Mature-Single-Female,  
+pc5=Black-Professional-American
+
+## Look at the scree plot. How many PCs would you choose based on that?
+#### Answer: We would choose five PCs since it appears as though that is a good representation of the ‘elbow’.
+
+## Are the first few Principal Components good predictors of income_above_50k?
+#### Answer: With 82% accuracy we can say that we are somewhat accurate in predicting if income is above $50k. When reviewing the truth matrix we can see that we are good at predicting true negatives, however predicting true positives are not as good.
+
+## How well can you predict income_above_50k using the first 5 or 6 principal components? How about only the first 2?
+#### Answer:For the first five or six principals we saw above that we are somewhat accurate in predicting if income is above $50k. For the first two principal components we can see that we have an 82% accuracy, which means we are somewhat accurate in predicting if income is above $50k. When reviewing the truth matrix we can see that we are slightly better at predicting true negatives, however predicting true positives are slightly better with the first five principal components.
+
+## Can you gain any insights into the data based on k-means clustering? 
+#### Answer:
+
+## Can you visualize and interpret some or all of your clusters?
+#### Answer:
+
+## Using any and all techniques we have learned, build the best predictive model for income_above_50k that you can. What are your best features? What model did you use? What interpretations can you draw?
+#### Answer:  
+
+## What metric can you use to assess model performance? Why is that a good choice of metric in this case?
+#### Answer: 
+
+## What are some key insights you found through your analysis?
+#### Answer: 
+
+
+# Grading
+
+10 pts PCA
+* analysis and interpretation of factor loadings
+* discussion of scree plot and/or analysis of some density plots of PCs
+* meaningful interpretation / discussion of conclusions 
+
+10 pts k-means
+* discussion for choosing number of clusters
+* analysis of cluster centers
+* bivariate chart(s) against meaningful variables and/or analysis of density plots
+* meaningful interpretation / discussion of conclusions 
+
+10 pts supervised learning
+* feature engineering / selection, whether with PCA or otherwise
+* interpretation of variable importance, coefficients if applicable
+* justification of choice of metric
+* discussion of choice or tuning of hyperparameters, if any
+* meaningful discussion of predictive power and conclusions from model
+
