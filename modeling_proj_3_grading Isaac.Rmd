@@ -45,7 +45,7 @@ Please try at least a few of the following:
 * Look at the scree plot. How many PCs would you choose based on that?
 * Are the first few Principal Components good predictors of income_above_50k?
 * How well can you predict income_above_50k using the first 5 or 6 principal components? How about only the first 2?
-* Can you gain any insights into the data based on k-means clustering? 
+* Can you gain any insights into the data based on k-means clustering?
 * Can you visualize and interpret some or all of your clusters?
 * Using any and all techniques we have learned, build the best predictive model for income_above_50k that you can. What are your best features? What model did you use? What interpretations can you draw?
 * What metric can you use to assess model performance? Why is that a good choice of metric in this case?
@@ -64,7 +64,71 @@ Please remember: a statement like "PC2 is not a meaningful predictor for our mod
 * discussion for choosing number of clusters
 * analysis of cluster centers
 * bivariate chart(s) against meaningful variables and/or analysis of density plots
-* meaningful interpretation / discussion of conclusions 
+* meaningful interpretation / discussion of conclusions
+
+10 pts supervised learning
+
+* feature engineering / selection, whether with PCA or otherwise
+* interpretation of variable importance, coefficients if applicable
+* justification of choice of metric
+* discussion of choice or tuning of hyperparameters, if any
+* meaningful discussion of predictive power and conclusions from model
+
+Please be prepared to 
+
+* Submit your Rmd + compiled html or pdf, *and*
+* Present your findings to the class in a compelling way, speaking for 10 minutes or so. You don't need to cover everything in your analysis that you submit to me, focus on the fun / interesting / compelling highlights or challenges.
+
+##Answers:
+* Can you gain any insights into the data based on k-means clustering?
+
+totss (Total Sum of Squares): This is the total sum of squared distances of each observation to the overall mean of the data.
+tot.withinss (Total Within-cluster Sum of Squares): This is the total sum of squared distances of each observation to their respective cluster centroids.
+betweenss (Between-cluster Sum of Squares): This is the sum of squared distances of each cluster centroid to the overall mean of the data. It is calculated as the difference between totss and tot.withinss.
+iter (Number of iterations): This is the number of iterations the k-means algorithm took to converge.
+In our output:
+
+totss: 477996.6
+tot.withinss: 400588.3
+betweenss: 77408.35
+iter: 5
+
+This means that our k-means algorithm took 5 iterations to converge, and the total sum of squares is 477996.6, while the total within-cluster sum of squares is 400588.3. The between-cluster sum of squares is 77408.35. The lower the within-cluster sum of squares, the more homogeneous the clusters are, as it indicates that points within the same cluster are closer together.
+
+* Can you visualize and interpret some or all of your clusters?
+
+We visualized our density plots. 
+The x-axis represents the range of values for each feature.
+The y-axis represents the density (the estimated probability density function) of the feature values. A higher density indicates that more data points are concentrated around that value.
+
+To interpret the density plots, we looked for differences in the distributions between the clusters. Most of the distributions were. not noticeably different for a given feature, which means that the k-means clustering algorithm has not found meaningful distinctions between the clusters based on that feature.
+
+Our distribution of age did have a little bit difference between clusters, it means that the clusters are composed of individuals with distinct age groups. 
+
+We didn't see many differences in the distributions to identify which features were most important in distinguishing the clusters.\
+
+* What metric can you use to assess model performance? Why is that a good choice of metric in this case?
+
+Each of the different metrics have their strengths and weaknesses, so it's important that we understand those differences before choosing the one that fits our needs.
+Accuracy is a useful metric when the classes are balanced, but it can be misleading when dealing with imbalanced datasets.
+Kappa is a measure of agreement between predicted and observed categorical outcomes, accounting for the agreement that would occur by chance. Kappa is less sensitive to class imbalance compared to accuracy and is useful when the dataset is imbalanced which our dataset is unbalanced.
+AUC-ROC (Area Under the Receiver Operating Characteristic Curve): AUC-ROC measures the ability of the model to distinguish between the classes. An AUC wth a value of 1 indicates a perfect model, and 0.5 indicates that the model is no better than random guessing. AUC-ROC is robust against class imbalance and is particularly useful for binary classification problems.
+The F1 score is the harmonic mean of precision and recall. It is useful when the class imbalance is present and when false positives and false negatives carry different costs, which not knowing how our model will be used not sure of what those costs would be.
+
+Then:
+10 pts k-means
+
+* discussion for choosing number of clusters
+
+
+* analysis of cluster centers
+
+* bivariate chart(s) against meaningful variables and/or analysis of density plots
+
+* meaningful interpretation / discussion of conclusions
+
+
+
 
 ##preprocessing before K-means clustering
 ```{r}
@@ -213,6 +277,47 @@ plot(select(income, c(`hours-per-week`, `education-num`)), pch = ".", main = "IF
 points(select(income, c(`hours-per-week`, `education-num`))[scores > 0.5,], cex = as.data.frame(scores)[scores > 0.5,])
        
 ```
+##Model Kmeans CLusters Kappa .57
+```{r}
+#income$income_above_50k <- as.factor(income$income_above_50k)
+incomek$income_above_50k <- factor(incomek$income_above_50k, levels = c(FALSE, TRUE), labels = c("Below_50K", "Above_50K"))
+
+
+#timer
+start_time <- Sys.time()
+
+
+# specify the model to be used (i.e. KNN, Naive Bayes, decision tree, random forest, bagged trees) and the tuning parameters used
+ctrl <- trainControl(method = "cv", number = 3, classProbs = TRUE, summaryFunction = twoClassSummary)
+set.seed(504) 
+
+income_index <- createDataPartition(incomek$income_above_50k, p = 0.80, list = FALSE)
+train <- incomek[ income_index, ]
+test <- incomek[-income_index, ]
+
+# example spec for rf
+fit <- train(income_above_50k ~ .,
+             data = train, 
+             method = "rf",
+             ntree = 20, 
+             tuneLength = 3,
+             metric = "ROC",
+             trControl = ctrl)
+
+fit
+
+confusionMatrix(predict(fit, test),factor(test$income_above_50k))
+
+
+#end timer
+end_time <- Sys.time()
+time_taken <- end_time - start_time
+print(time_taken)
+print(as.numeric(time_taken, units = "mins"))
+```
+
+
+
 
 ##Model kappa .57 with no feature engineering
 ```{r}
@@ -742,7 +847,7 @@ income3 <- income3 %>%
 ```
 
 
-##Tuesday kappa.57
+##Tuesday kappa.57 RF full dataset
 ```{r}
 
 income = read_csv("./openml_1590.csv", na=c("?")) %>%
@@ -767,7 +872,7 @@ income_index <- createDataPartition(income$income_above_50k, p = 0.80, list = FA
 train <- income[ income_index, ]
 test <- income[-income_index, ]
 
-# example spec for rf
+#RF
 fit <- train(income_above_50k ~ .,
              data = train, 
              method = "rf",
@@ -786,11 +891,194 @@ end_time <- Sys.time()
 time_taken <- end_time - start_time
 print(time_taken)
 print(as.numeric(time_taken, units = "mins"))
+
+
+# Naive Bayes
+fit_nb <- train(income_above_50k ~ .,
+                data = train,
+                method = "naive_bayes",
+                metric = "ROC",
+                trControl = ctrl)
+
+fit_nb
+
+confusionMatrix(predict(fit_nb, test), factor(test$income_above_50k))
+
+#error
+# KNN
+fit_knn <- train(income_above_50k ~ .,
+                 data = train,
+                 method = "knn",
+                 tuneLength = 10,
+                 metric = "ROC",
+                 trControl = ctrl)
+
+fit_knn
+
+confusionMatrix(predict(fit_knn, test), factor(test$income_above_50k))
+
+#error
+# K-Nearest Neighbors (KNN) with data normalization
+fit_knn_normalized <- train(income_above_50k ~ .,
+                            data = train,
+                            method = "knn",
+                            preProcess = "normalize", # Normalize the data
+                            metric = "ROC",
+                            trControl = ctrl)
+
+fit_knn_normalized
+
+confusionMatrix(predict(fit_knn_normalized, test), factor(test$income_above_50k))
+
+#error
+library(rpart)
+# Decision Tree (CART)
+fit_cart <- train(income_above_50k ~ .,
+                  data = train,
+                  method = "rpart",
+                  metric = "ROC",
+                  trControl = ctrl)
+
+fit_cart
+
+confusionMatrix(predict(fit_cart, test), factor(test$income_above_50k))
+
+
+# SVM Support Vector Machine
+fit_svm <- train(income_above_50k ~ .,
+                 data = train,
+                 method = "svmRadial",
+                 tuneLength = 3,
+                 metric = "ROC",
+                 trControl = ctrl)
+
+fit_svm
+
+confusionMatrix(predict(fit_svm, test), factor(test$income_above_50k))
+
+# Logistic Regression Kappa .51
+fit_logreg <- train(income_above_50k ~ .,
+                    data = train,
+                    method = "glm",
+                    family = "binomial",
+                    metric = "ROC",
+                    trControl = ctrl)
+
+fit_logreg
+
+confusionMatrix(predict(fit_logreg, test), factor(test$income_above_50k))
+
+# Gradient Boosting Machine Kappa .51
+fit_gbm <- train(income_above_50k ~ .,
+                 data = train,
+                 method = "gbm",
+                 tuneLength = 3,
+                 metric = "ROC",
+                 trControl = ctrl)
+
+fit_gbm
+
+confusionMatrix(predict(fit_gbm, test), factor(test$income_above_50k))
+
+# XGBoost Kappa .53
+fit_xgb <- train(income_above_50k ~ .,
+                 data = train,
+                 method = "xgbTree",
+                 tuneLength = 3,
+                 metric = "ROC",
+                 trControl = ctrl)
+
+fit_xgb
+
+confusionMatrix(predict(fit_xgb, test), factor(test$income_above_50k))
+
+
 ```
 
-##Tuesday pt2 EDA v1 variables kappa .41
+##Multiple Accuracy measurements
 ```{r}
 
+ctrl <- trainControl(method = "cv", number = 5, classProbs = TRUE, summaryFunction = defaultSummary)
+
+models <- list(
+  rf = train(income_above_50k ~ ., data = train, method = "rf", metric = "Accuracy", trControl = ctrl),
+  nb = train(income_above_50k ~ ., data = train, method = "nb", metric = "Accuracy", trControl = ctrl),
+  knn = train(income_above_50k ~ ., data = train, method = "knn", metric = "Accuracy", trControl = ctrl),
+  dt = train(income_above_50k ~ ., data = train, method = "rpart", metric = "Accuracy", trControl = ctrl)
+)
+
+results <- resamples(models)
+summary(results, metric = "Accuracy")
+
+```
+
+##Multiple Kappa
+```{r}
+
+ctrl <- trainControl(method = "cv", number = 5, classProbs = TRUE, summaryFunction = defaultSummary)
+
+models <- list(
+  rf = train(income_above_50k ~ ., data = train, method = "rf", metric = "Kappa", trControl = ctrl),
+  nb = train(income_above_50k ~ ., data = train, method = "nb", metric = "Kappa", trControl = ctrl),
+  knn = train(income_above_50k ~ ., data = train, method = "knn", metric = "Kappa", trControl = ctrl),
+  dt = train(income_above_50k ~ ., data = train, method = "rpart", metric = "Kappa", trControl = ctrl)
+)
+
+results <- resamples(models)
+summary(results, metric = "Kappa")
+
+```
+
+##Multiple AUC
+```{r}
+
+ctrl <- trainControl(method = "cv", number = 5, classProbs = TRUE, summaryFunction = twoClassSummary)
+
+# Train multiple models using different methods
+models <- list(
+  rf = train(income_above_50k ~ ., data = train, method = "rf", metric = "ROC", trControl = ctrl),
+  nb = train(income_above_50k ~ ., data = train, method = "nb", metric = "ROC", trControl = ctrl))#,
+  #knn = train(income_above_50k ~ ., data = train, method = "knn", metric = "ROC", trControl = ctrl),
+  #dt = train(income_above_50k ~ ., data = train, method = "rpart", metric = "ROC", trControl = ctrl)
+)
+
+# Evaluate the models using the chosen metrics
+results <- resamples(models)
+
+# Compare the models
+summary(results, metric = "ROC")
+
+#error
+prob <- predict(fit, newdata=test)
+pred <- ifelse(prob > 0.5, 1, 0)
+confusionMatrix(factor(pred),factor(test$income_above_50k))
+#error
+library(pROC)
+myRoc <- roc(test$income_above_50k, prob)
+plot(myRoc)
+
+```
+
+##Multiple F1
+```{r}
+
+ctrl <- trainControl(method = "cv", number = 5, classProbs = TRUE, summaryFunction = prSummary)
+
+models <- list(
+  rf = train(income_above_50k ~ ., data = train, method = "rf", metric = "F1", trControl = ctrl),
+  nb = train(income_above_50k ~ ., data = train, method = "nb", metric = "F1", trControl = ctrl),
+  knn = train(income_above_50k ~ ., data = train, method = "knn", metric = "F1", trControl = ctrl),
+  dt = train(income_above_50k ~ ., data = train, method = "rpart", metric = "F1", trControl = ctrl)
+)
+
+results <- resamples(models)
+summary(results, metric = "F1")
+
+```
+
+
+##Tuesday pt2 EDA v1 variables kappa .41 RF
+```{r}
 
 income = read_csv("./openml_1590.csv", na=c("?")) %>%
   drop_na() %>%
@@ -906,4 +1194,170 @@ time_taken <- end_time - start_time
 print(time_taken)
 print(as.numeric(time_taken, units = "mins"))
 ```
+##Tuesday pt3 w/EDA pt2 variables RF Kappa .46
+```{r}
+
+income = read_csv("./openml_1590.csv", na=c("?")) %>%
+  drop_na() %>%
+  mutate(income_above_50k = class==">50K") %>%
+  select(-class) #%>%
+  #dummy_cols(remove_selected_columns = T)
+
+#income$income_above_50k <- as.factor(income$income_above_50k)
+income$income_above_50k <- factor(income$income_above_50k, levels = c(FALSE, TRUE), labels = c("Below_50K", "Above_50K"))
+
+#New adds
+
+# Bin the 'age' column
+income <- income %>%
+  mutate(age_group = case_when(
+    age >= 0 & age <= 25 ~ "young",
+    age > 25 & age <= 65 ~ "prime",
+    age > 65 & age <= 100 ~ "retired"
+  )) %>%
+    select(-age)
+
+# Create 'Capital Diff' column and remove 'Capital Gain' and 'Capital Loss' columns
+income <- income %>%
+  mutate(capital_diff = `capital-gain` - `capital-loss`) %>%
+  select(-`capital-gain`, -`capital-loss`)
+
+# Bin the 'Capital Diff' column
+income <- income %>%
+  mutate(capital_diff = case_when(
+    capital_diff >= -5000 & capital_diff <= 5000 ~ "Minor",
+    capital_diff > 5000 & capital_diff <= 100000 ~ "Major"
+  ))
+
+#drop Columns
+income <- income %>% select(-fnlwgt)
+
+income <- income %>%
+  filter(workclass != "Without-pay")
+
+# Bin 'Hours per Week' column
+income <- income %>%
+  mutate(hours_per_week = case_when(
+    `hours-per-week` >= 0 & `hours-per-week` <= 32 ~ "part_time",
+    `hours-per-week` > 32 & `hours-per-week` <= 40 ~ "full_time",
+    `hours-per-week` > 40 & `hours-per-week` <= 100 ~ "overtime"
+  )) %>%
+    select(-`hours-per-week`)
+
+#Bin Education
+income <- income %>%
+  select(-`education-num`) %>%
+  mutate(education = recode(education,
+                            "11th" = "School",
+                            "9th" = "School",
+                            "7th-8th" = "School",
+                            "5th-6th" = "School",
+                            "10th" = "School",
+                            "1st-4th" = "School",
+                            "Preschool" = "School",
+                            "12th" = "School"
+                            ))
+
+#Race
+income <- income %>%
+  mutate(race = recode(race,
+                       "Black" = "Other",
+                       "Asian-Pac-Islander" = "Other",
+                       "Amer-Indian-Eskimo" = "Other",
+                       "Other" = "Other"
+                       ))
+
+# Replace all countries except the first one with 'Other'
+countries <- unique(income$`native-country`)
+income$`native-country` <- ifelse(income$`native-country` %in% countries[-1], "Other", income$`native-country`)
+
+
+#Education further binned
+income <- income %>%
+  mutate(education = recode(education,
+                            "School" = "Some_college_orless",
+                            "Some-college" = "Some_college_orless",
+                            "HS-grad" = "Some_college_orless",
+                            "Assoc-voc" = "Some_college_orless",
+                            "Assoc-acdm" = "Some_college_orless",
+                            "Masters" = "Master_plus",
+                            "Prof-school" = "Master_plus",
+                            "Doctorate" = "Master_plus"
+                            ))
+
+#occupation further binned
+income <- income %>%
+  mutate(occupation = recode(occupation,
+                            "Exec-managerial" = "high_tier",
+                            "Prof-specialty" = "high_tier",
+                            "Sales" = "mid_tier",
+                            "Craft-repair" = "mid_tier",
+                            "Adm-clerical" = "mid_tier",
+                            "Transport-moving" = "low_tier",
+                            "Tech-support" = "low_tier",
+                            "Machine-op-inspct" = "low_tier",
+                            "Protective-serv" = "low_tier",
+                            "Other-service" = "low_tier",
+                            "Farming-fishing" = "low_tier",
+                            "Handlers-cleaners" = "low_tier",
+                            "Armed-Forces" = "low_tier",
+                            "Priv-house-serv" = "low_tier"
+                            ))
+
+#further binned marital status
+income <- income %>%
+  mutate(`marital_status` = recode(`marital-status`,
+                            "Never-married" = "never",
+                            "Married-civ-spouse" = "married",
+                            "Widowed" = "not_married",
+                            "Separated" = "not_married",
+                            "Divorced" = "not_married",
+                            "Married-spouse-absent" = "married",
+                            "Married-AF-spouse" = "married"
+                            )) %>% 
+    select(-`marital-status`)
+
+
+
+
+#Create Dummy Variables
+income <- income %>%
+  dummy_cols(select_columns = setdiff(names(income), "income_above_50k"), remove_selected_columns = T)
+
+#income %>%
+  #dummy_cols(remove_selected_columns = T)
+
+#timer
+start_time <- Sys.time()
+
+
+# specify the model to be used (i.e. KNN, Naive Bayes, decision tree, random forest, bagged trees) and the tuning parameters used
+ctrl <- trainControl(method = "cv", number = 3, classProbs = TRUE, summaryFunction = twoClassSummary)
+set.seed(504) 
+
+income_index <- createDataPartition(income$income_above_50k, p = 0.80, list = FALSE)
+train <- income[ income_index, ]
+test <- income[-income_index, ]
+
+# example spec for rf
+fit <- train(income_above_50k ~ .,
+             data = train, 
+             method = "rf",
+             ntree = 20, 
+             tuneLength = 3,
+             metric = "ROC",
+             trControl = ctrl)
+
+fit
+
+confusionMatrix(predict(fit, test),factor(test$income_above_50k))
+
+
+#end timer
+end_time <- Sys.time()
+time_taken <- end_time - start_time
+print(time_taken)
+print(as.numeric(time_taken, units = "mins"))
+```
+
 
