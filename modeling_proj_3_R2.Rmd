@@ -30,7 +30,7 @@ str(income2)
 
 ```
 
-# EDA
+# **EDA**
 ### Bucket Age
 ```{r}
 
@@ -170,7 +170,7 @@ income2_dummies <- income2 %>%
 ```
 
 
-#PCA
+# **PCA**  
 ### Running PCA on the dataset.
 ```{r results='hide'}
 pr_income <- prcomp(x = select(income2_dummies, -income_above_50k), scale = T, center = T)
@@ -179,7 +179,7 @@ summary(pr_income)
 
 ```
 
-### Determine how many principal components are needed to explain half the variation
+#### Determining how many principal components are needed to explain half the variation
 ```{r}
 cumulative_proportion <- cumsum(pr_income$sdev^2 / sum(pr_income$sdev^2))
 
@@ -189,7 +189,7 @@ cat("The number of principal components needed to explain 50% of the variation i
 
 ```
 
-### Viewing the loadings of each principal component to see the individual contribution of each predictor variable to each principal component.
+#### Viewing the loadings of each principal component to see the individual contribution of each predictor variable to each principal component
 ```{r}
 loadings <- rownames_to_column(as.data.frame(pr_income$rotation)) %>%
 select(1:6) %>%
@@ -200,14 +200,14 @@ loadings
 ```
 
 
-### Viewing the scree plot to determine how many PCs to choose?
+#### Viewing the scree plot to determine how many PCs to choose
 ```{r}
 screeplot(pr_income, type = "lines")
 
 ```
 
 
-### Adding income above 50k back into the data and naming principal components
+#### Adding income above 50k back into the data and naming principal components
 ```{r}
 prc <- bind_cols(select(income2_dummies,income_above_50k),as.data.frame(pr_income$x)) %>%
 select(1:6) %>% 
@@ -219,7 +219,7 @@ select(1:6) %>%
 
 ```
 
-## Density Plots:
+## **Density Plots**
 
 ### Density of different components by income (Factors 1&2)
 ```{r}
@@ -256,7 +256,7 @@ facet_grid(.~component)
 
 ```
 
-# Modeling
+# **Modeling**
 ### Use the top five factors for prediction
 ```{r}
 set.seed(555)
@@ -310,14 +310,17 @@ prcAll <- bind_cols(select(income2_dummies,income_above_50k),as.data.frame(pr_in
 
 
 ### Attempting gradiant boosting on hand selected features
-```{r}
+```{r results='hide'}
 fit <- train(income_above_50k ~ .,
              data = income3,
              method = "gbm",
              trControl = trainControl(method = "cv"))
 
-confusionMatrix(predict(fit, income3),factor(income3$income_above_50k))
+```
 
+### Gradiant boosting results
+```{r}
+confusionMatrix(predict(fit, income3),factor(income3$income_above_50k))
 ```
 
 
@@ -334,28 +337,28 @@ confusionMatrix(predict(fit, prc25), factor(prc25$income_above_50k))
 ```
 Note: The above chunk was used for multiple models, changing out data and method, results were recorded below.
 
-#Overall Results:
+# **Overall Results:**
 
-hand picked features (12) based on prc components:
-NB: kappa=.4743, Accuracy=.8228
-gbm: kappa=.4713, Accuracy=.8218
-
-
-prc with 2pc NB: kappa=.4935, Accuracy=.8235
-prc with 2pc KNN: kappa=.5659, Accuracy=.8478
+hand picked features (12) based on prc components:  
+NB: kappa=.4743, Accuracy=.8228  
+gbm: kappa=.4713, Accuracy=.8218  
 
 
-prc with 5pc NB: kappa=.4946, Accuracy=.8191
-prc with 5pc KNN: kappa=.5708, Accuracy=.8496
+prc with 2pc NB: kappa=.4935, Accuracy=.8235  
+prc with 2pc KNN: kappa=.5659, Accuracy=.8478  
 
-prc with 10pc NB: kappa=.5103, Accuracy=.8200
-prc with 10pc KNN: kappa=.5837, Accuracy=.8541
+prc with 5pc NB: kappa=.4946, Accuracy=.8191  
+prc with 5pc KNN: kappa=.5708, Accuracy=.8496  
 
-prc with 25pc NB: kappa=.5377, Accuracy=.8281
-prc with 25pc KNN: kappa=.5825, Accuracy=.8529
+prc with 10pc NB: kappa=.5103, Accuracy=.8200  
+prc with 10pc KNN: kappa=.5837, Accuracy=.8541  
 
-prc with all 71pc KNN: kappa=.5895, Accuracy=.8549
+prc with 25pc NB: kappa=.5377, Accuracy=.8281  
+prc with 25pc KNN: kappa=.5825, Accuracy=.8529  
 
+prc with all 71pc KNN: kappa=.5895, Accuracy=.8549  
+
+### Plotting of the results
 ```{r}
 results <- read.csv('results.csv')
 
@@ -385,61 +388,62 @@ accuracyPlot + kappaPlot + plot_annotation(
 ```
 
 
-# Questions & Answers
+# **Questions & Answers**
 
-## Run PCA on the dataset. How many principal components do you need to explain half the variation? 
-#### Answer: The number of principal components needed to explain 50% of the variation is 14
+#### Run PCA on the dataset. How many principal components do you need to explain half the variation?  
+**Answer:**The number of principal components needed to explain 50% of the variation is 14.
 
-## Can you give some interpretation of the principal components?
-#### Answer:  
+#### Can you give some interpretation of the principal components?
+**Answer:**    
 pc1=Married-Male,  
 pc2=Educated-Professional-Mexican,  
 pc3=White-American-With_child,  
 PC4=Mature-Single-Female,  
 pc5=Black-Professional-American
 
-## Look at the scree plot. How many PCs would you choose based on that?
-#### Answer: We would choose five PCs since it appears as though that is a good representation of the ‘elbow’.
+#### Look at the scree plot. How many PCs would you choose based on that?
+**Answer:**We would choose five PCs since it appears as though that is a good representation of the ‘elbow’.
 
-## Are the first few Principal Components good predictors of income_above_50k?
-#### Answer: With 82% accuracy we can say that we are somewhat accurate in predicting if income is above $50k. When reviewing the truth matrix we can see that we are good at predicting true negatives, however predicting true positives are not as good.
+#### Are the first few Principal Components good predictors of income_above_50k?
+**Answer:** With 82% accuracy we can say that we are somewhat accurate in predicting if income is above $50k. When reviewing the truth matrix we can see that we are good at predicting true negatives, however predicting true positives are not as good.
 
-## How well can you predict income_above_50k using the first 5 or 6 principal components? How about only the first 2?
-#### Answer:For the first five or six principals we saw above that we are somewhat accurate in predicting if income is above $50k. For the first two principal components we can see that we have an 82% accuracy, which means we are somewhat accurate in predicting if income is above $50k. When reviewing the truth matrix we can see that we are slightly better at predicting true negatives, however predicting true positives are slightly better with the first five principal components.
+#### How well can you predict income_above_50k using the first 5 or 6 principal components? How about only the first 2?
+**Answer:** For the first five or six principals we saw above that we are somewhat accurate in predicting if income is above \$50k. For the first two principal components we can see that we have an 82% accuracy, which means we are somewhat accurate in predicting if income is above \$50k. When reviewing the truth matrix we can see that we are slightly better at predicting true negatives, however predicting true positives are slightly better with the first five principal components.
 
-## Can you gain any insights into the data based on k-means clustering? 
-#### Answer:
+#### Can you gain any insights into the data based on k-means clustering? 
+**Answer:**
 
-## Can you visualize and interpret some or all of your clusters?
-#### Answer:
+#### Can you visualize and interpret some or all of your clusters?
+**Answer:**
 
-## Using any and all techniques we have learned, build the best predictive model for income_above_50k that you can. What are your best features? What model did you use? What interpretations can you draw?
-#### Answer:  
 
-## What metric can you use to assess model performance? Why is that a good choice of metric in this case?
-#### Answer: 
+#### Using any and all techniques we have learned, build the best predictive model for income_above_50k that you can. What are your best features? What model did you use? What interpretations can you draw?
+**Answer:** 
 
-## What are some key insights you found through your analysis?
-#### Answer: 
+#### What metric can you use to assess model performance? Why is that a good choice of metric in this case?
+**Answer:**
+
+#### What are some key insights you found through your analysis?
+**Answer:** 
 
 
 # Grading
 
-10 pts PCA
-* analysis and interpretation of factor loadings
-* discussion of scree plot and/or analysis of some density plots of PCs
-* meaningful interpretation / discussion of conclusions 
+10 pts PCA  
+* analysis and interpretation of factor loadings  
+* discussion of scree plot and/or analysis of some density plots of PCs  
+* meaningful interpretation / discussion of conclusions  
 
-10 pts k-means
-* discussion for choosing number of clusters
-* analysis of cluster centers
-* bivariate chart(s) against meaningful variables and/or analysis of density plots
-* meaningful interpretation / discussion of conclusions 
+10 pts k-means  
+* discussion for choosing number of clusters  
+* analysis of cluster centers  
+* bivariate chart(s) against meaningful variables and/or analysis of density plots  
+* meaningful interpretation / discussion of conclusions   
 
-10 pts supervised learning
-* feature engineering / selection, whether with PCA or otherwise
-* interpretation of variable importance, coefficients if applicable
-* justification of choice of metric
-* discussion of choice or tuning of hyperparameters, if any
-* meaningful discussion of predictive power and conclusions from model
+10 pts supervised learning  
+* feature engineering / selection, whether with PCA or otherwise  
+* interpretation of variable importance, coefficients if applicable  
+* justification of choice of metric  
+* discussion of choice or tuning of hyperparameters, if any  
+* meaningful discussion of predictive power and conclusions from model  
 
