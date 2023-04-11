@@ -383,13 +383,28 @@ prc with all 71pc KNN: kappa=.5895, Accuracy=.8549
 ```{r}
 results <- read.csv('results.csv')
 
-results %>% 
-ggplot(aes(x = X, y = Accuracy, fill = Kappa)) +
-  geom_bar(stat = "identity", width = 0.8) +
-  #facet_wrap(~Kappa, scales = "free_y", nrow = 1) +
+accuracyPlot <- results %>% 
+ggplot(aes(x = X, y = Accuracy, fill = X)) +
+  geom_col() +
   coord_flip() +
-  labs(x = "", y = "Accuracy", fill = "Kappa") +
-  theme_bw()
+  labs(x = "", y = "Accuracy") +
+  theme_minimal()+
+  theme(legend.position="none")
+
+kappaPlot <- results %>% 
+ggplot(aes(x = X, y = Kappa, fill = X)) +
+  geom_col() +
+  coord_flip() +
+  labs(x = "", y = "Kappa") +
+  theme_minimal()+
+  theme(legend.position="none")
+
+
+library(patchwork)
+
+accuracyPlot + kappaPlot + plot_annotation(
+  title = "Accuracy and Kappa results for various models"
+)
 
 ```
 
