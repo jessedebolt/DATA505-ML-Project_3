@@ -282,9 +282,12 @@ income2 = read_csv("./openml_1590.csv", na=c("?")) %>%
   mutate(income_above_50k = class==">50K") %>%
   select(-class)
 
-income2$income_above_50k <- as.numeric(factor(income2$income_above_50k, levels = unique(income2$income_above_50k))) - 1
+##income2$income_above_50k <- as.numeric(factor(income2$income_above_50k, levels = unique(income2$income_above_50k))) - 1
+income2$income_above_50k <- as.factor(income2$income_above_50k)
+##try2
+income2$income_above_50k <- as.numeric(income2$income_above_50k) - 1
 
-str(income2)
+#str(income2)
 
 # Set the figure size for the plots
 library(ggplot2)
@@ -342,10 +345,11 @@ ggplot(income2, aes(x = age_group, fill = as.factor(income_above_50k))) +
 ```{r}
 
 #check if factor
-class(income2$income_above_50k)
+##class(income2$income_above_50k)
 
 # Convert 'income_above_50k' to a factor
-income2$income_above_50k <- as.factor(income2$income_above_50k)
+##income2$income_above_50k <- as.factor(income2$income_above_50k)
+##see above for same in EDA now
 
 # Create 'Capital Diff' column and remove 'Capital Gain' and 'Capital Loss' columns
 income2 <- income2 %>%
@@ -463,6 +467,9 @@ ggplot(income2, aes(x = occupation_ordered, fill = as.factor(income_above_50k)))
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
   labs(x = "Occupation", y = "Count", fill = "Income Above 50K")
 
+#remove occupation
+income2 <- income2 %>%
+    select(-occupation)
 ```
 ##Race
 ```{r}
@@ -732,5 +739,171 @@ income3 <- income3 %>%
                             )) %>% 
     select(-`marital-status`)
 
+```
+
+
+##Tuesday kappa.57
+```{r}
+
+income = read_csv("./openml_1590.csv", na=c("?")) %>%
+  drop_na() %>%
+  mutate(income_above_50k = class==">50K") %>%
+  select(-class) %>%
+  dummy_cols(remove_selected_columns = T)
+
+#income$income_above_50k <- as.factor(income$income_above_50k)
+income$income_above_50k <- factor(income$income_above_50k, levels = c(FALSE, TRUE), labels = c("Below_50K", "Above_50K"))
+
+
+#timer
+start_time <- Sys.time()
+
+
+# specify the model to be used (i.e. KNN, Naive Bayes, decision tree, random forest, bagged trees) and the tuning parameters used
+ctrl <- trainControl(method = "cv", number = 3, classProbs = TRUE, summaryFunction = twoClassSummary)
+set.seed(504) 
+
+income_index <- createDataPartition(income$income_above_50k, p = 0.80, list = FALSE)
+train <- income[ income_index, ]
+test <- income[-income_index, ]
+
+# example spec for rf
+fit <- train(income_above_50k ~ .,
+             data = train, 
+             method = "rf",
+             ntree = 20, 
+             tuneLength = 3,
+             metric = "ROC",
+             trControl = ctrl)
+
+fit
+
+confusionMatrix(predict(fit, test),factor(test$income_above_50k))
+
+
+#end timer
+end_time <- Sys.time()
+time_taken <- end_time - start_time
+print(time_taken)
+print(as.numeric(time_taken, units = "mins"))
+```
+
+##Tuesday pt2 EDA v1 variables kappa .41
+```{r}
+
+
+income = read_csv("./openml_1590.csv", na=c("?")) %>%
+  drop_na() %>%
+  mutate(income_above_50k = class==">50K") %>%
+  select(-class) #%>%
+  #dummy_cols(remove_selected_columns = T)
+
+#income$income_above_50k <- as.factor(income$income_above_50k)
+income$income_above_50k <- factor(income$income_above_50k, levels = c(FALSE, TRUE), labels = c("Below_50K", "Above_50K"))
+
+#New adds
+
+# Bin the 'age' column
+income <- income %>%
+  mutate(age_group = case_when(
+    age >= 0 & age <= 25 ~ "young",
+    age > 25 & age <= 65 ~ "prime",
+    age > 65 & age <= 100 ~ "retired"
+  )) %>%
+    select(-age)
+
+# Create 'Capital Diff' column and remove 'Capital Gain' and 'Capital Loss' columns
+income <- income %>%
+  mutate(capital_diff = `capital-gain` - `capital-loss`) %>%
+  select(-`capital-gain`, -`capital-loss`)
+
+# Bin the 'Capital Diff' column
+income <- income %>%
+  mutate(capital_diff = case_when(
+    capital_diff >= -5000 & capital_diff <= 5000 ~ "Minor",
+    capital_diff > 5000 & capital_diff <= 100000 ~ "Major"
+  ))
+
+#drop Columns
+income <- income %>% select(-fnlwgt)
+
+income <- income %>%
+  filter(workclass != "Without-pay")
+
+# Bin 'Hours per Week' column
+income <- income %>%
+  mutate(hours_per_week = case_when(
+    `hours-per-week` >= 0 & `hours-per-week` <= 32 ~ "part_time",
+    `hours-per-week` > 32 & `hours-per-week` <= 40 ~ "full_time",
+    `hours-per-week` > 40 & `hours-per-week` <= 100 ~ "overtime"
+  )) %>%
+    select(-`hours-per-week`)
+
+#Bin Education
+income <- income %>%
+  select(-`education-num`) %>%
+  mutate(education = recode(education,
+                            "11th" = "School",
+                            "9th" = "School",
+                            "7th-8th" = "School",
+                            "5th-6th" = "School",
+                            "10th" = "School",
+                            "1st-4th" = "School",
+                            "Preschool" = "School",
+                            "12th" = "School"
+                            ))
+
+#Race
+income <- income %>%
+  mutate(race = recode(race,
+                       "Black" = "Other",
+                       "Asian-Pac-Islander" = "Other",
+                       "Amer-Indian-Eskimo" = "Other",
+                       "Other" = "Other"
+                       ))
+
+# Replace all countries except the first one with 'Other'
+countries <- unique(income$`native-country`)
+income$`native-country` <- ifelse(income$`native-country` %in% countries[-1], "Other", income$`native-country`)
+
+
+#Create Dummy Variables
+income <- income %>%
+  dummy_cols(select_columns = setdiff(names(income), "income_above_50k"), remove_selected_columns = T)
+
+#income %>%
+  #dummy_cols(remove_selected_columns = T)
+
+#timer
+start_time <- Sys.time()
+
+
+# specify the model to be used (i.e. KNN, Naive Bayes, decision tree, random forest, bagged trees) and the tuning parameters used
+ctrl <- trainControl(method = "cv", number = 3, classProbs = TRUE, summaryFunction = twoClassSummary)
+set.seed(504) 
+
+income_index <- createDataPartition(income$income_above_50k, p = 0.80, list = FALSE)
+train <- income[ income_index, ]
+test <- income[-income_index, ]
+
+# example spec for rf
+fit <- train(income_above_50k ~ .,
+             data = train, 
+             method = "rf",
+             ntree = 20, 
+             tuneLength = 3,
+             metric = "ROC",
+             trControl = ctrl)
+
+fit
+
+confusionMatrix(predict(fit, test),factor(test$income_above_50k))
+
+
+#end timer
+end_time <- Sys.time()
+time_taken <- end_time - start_time
+print(time_taken)
+print(as.numeric(time_taken, units = "mins"))
 ```
 
