@@ -406,6 +406,9 @@ confusionMatrix(predict(fit, prc),factor(prc$income_above_50k))
 income3 <- income2_dummies %>% 
   select("income_above_50k", "sex_Male", "occupation_Prof-specialty", "education_School", "native-country_United-States", "marital-status_Married-civ-spouse", "education_Masters", "education_Bachelors",  "race_White", "occupation_ordered_Prof-specialty", "age_group_prime", "occupation_Exec-managerial", "occupation_ordered_Exec-managerial")
 
+#Added
+income3 <- income2_dummies %>% 
+  select(income_above_50k, sex_Male, occupation_Prof-specialty, education_School, native-country_United-States, marital-status_Married-civ-spouse, education_Masters, education_Bachelors,  race_White, occupation_ordered_Prof-specialty, age_group_prime, occupation_Exec-managerial, occupation_ordered_Exec-managerial)
 ```
 
 
