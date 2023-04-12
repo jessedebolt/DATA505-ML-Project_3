@@ -1,7 +1,7 @@
 ---
 title: "Machine Learning Project 3"
 author: "Isaac Johnson & Jesse DeBolt"
-date: "2023-04-10"
+date: "2023-04-11"
 output: html_document
 ---
 
@@ -391,7 +391,7 @@ accuracyPlot + kappaPlot + plot_annotation(
 # **Questions & Answers**
 
 #### Run PCA on the dataset. How many principal components do you need to explain half the variation?  
-**Answer:**The number of principal components needed to explain 50% of the variation is 14.
+**Answer:**The number of principal components needed to explain 50% of the variation is 14.  
 
 #### Can you give some interpretation of the principal components?
 **Answer:**    
@@ -399,32 +399,56 @@ pc1=Married-Male,
 pc2=Educated-Professional-Mexican,  
 pc3=White-American-With_child,  
 PC4=Mature-Single-Female,  
-pc5=Black-Professional-American
+pc5=Black-Professional-American  
 
 #### Look at the scree plot. How many PCs would you choose based on that?
-**Answer:**We would choose five PCs since it appears as though that is a good representation of the ‘elbow’.
+**Answer:**We would choose five PCs since it appears as though that is a good representation of the ‘elbow’.  
 
 #### Are the first few Principal Components good predictors of income_above_50k?
-**Answer:** With 82% accuracy we can say that we are somewhat accurate in predicting if income is above $50k. When reviewing the truth matrix we can see that we are good at predicting true negatives, however predicting true positives are not as good.
+**Answer:** With 82% accuracy we can say that we are somewhat accurate in predicting if income is above $50k. When reviewing the truth matrix we can see that we are good at predicting true negatives, however predicting true positives are not as good.  
 
 #### How well can you predict income_above_50k using the first 5 or 6 principal components? How about only the first 2?
-**Answer:** For the first five or six principals we saw above that we are somewhat accurate in predicting if income is above \$50k. For the first two principal components we can see that we have an 82% accuracy, which means we are somewhat accurate in predicting if income is above \$50k. When reviewing the truth matrix we can see that we are slightly better at predicting true negatives, however predicting true positives are slightly better with the first five principal components.
+**Answer:** For the first five or six principals we saw above that we are somewhat accurate in predicting if income is above \$50k. For the first two principal components we can see that we have an 82% accuracy, which means we are somewhat accurate in predicting if income is above \$50k. When reviewing the truth matrix we can see that we are slightly better at predicting true negatives, however predicting true positives are slightly better with the first five principal components.  
 
 #### Can you gain any insights into the data based on k-means clustering? 
-**Answer:**
+**Answer:**totss (Total Sum of Squares): This is the total sum of squared distances of each observation to the overall mean of the data.  
+tot.withinss (Total Within-cluster Sum of Squares): This is the total sum of squared distances of each observation to their respective cluster centroids.  
+betweenss (Between-cluster Sum of Squares): This is the sum of squared distances of each cluster centroid to the overall mean of the data. It is calculated as the difference between totss and tot.withinss.  
+iter (Number of iterations): This is the number of iterations the k-means algorithm took to converge.  
+In our output:  
+
+totss: 477996.6  
+tot.withinss: 400588.3  
+betweenss: 77408.35  
+iter: 5  
+
+This means that our k-means algorithm took 5 iterations to converge, and the total sum of squares is 477996.6, while the total within-cluster sum of squares is 400588.3. The between-cluster sum of squares is 77408.35. The lower the within-cluster sum of squares, the more homogeneous the clusters are, as it indicates that points within the same cluster are closer together.  
 
 #### Can you visualize and interpret some or all of your clusters?
-**Answer:**
+**Answer:**We visualized our density plots.   
+The x-axis represents the range of values for each feature.  
+The y-axis represents the density (the estimated probability density function) of the feature values. A higher density indicates that more data points are concentrated around that value.  
 
+To interpret the density plots, we looked for differences in the distributions between the clusters. Most of the distributions were. not noticeably different for a given feature, which means that the k-means clustering algorithm has not found meaningful distinctions between the clusters based on that feature.  
+
+Our distribution of age did have a little bit difference between clusters, it means that the clusters are composed of individuals with distinct age groups.  
+
+We didn't see many differences in the distributions to identify which features were most important in distinguishing the clusters.    
 
 #### Using any and all techniques we have learned, build the best predictive model for income_above_50k that you can. What are your best features? What model did you use? What interpretations can you draw?
-**Answer:** 
+**Answer:**It was really hard to predict income.  None of the variables seemed to have a large effect on being able to accurately predict income.  We tried PCA, Kmeans clusters, feature engineering, binning the variables, etc... The model only got worse. We determined that the best model was when we used the top 10 principal components with the KNN method. Using all 71 principal component did result in a slightly better kappa and accuracy, but the length of time to run the model was much longer and not worth the added effort. Also the dataset was pretty imbalanced since about 75% of the data was income below 50k.  
 
 #### What metric can you use to assess model performance? Why is that a good choice of metric in this case?
-**Answer:**
+**Answer:**Each of the different metrics have their strengths and weaknesses, so it's important that we understand those differences before choosing the one that fits our needs.  
+Accuracy is a useful metric when the classes are balanced, but it can be misleading when dealing with imbalanced datasets which our dataset is.  
+Kappa is a measure of agreement between predicted and observed categorical outcomes, accounting for the agreement that would occur by chance. Kappa is less sensitive to class imbalance compared to accuracy and is useful when the dataset is imbalanced.  
+AUC-ROC (Area Under the Receiver Operating Characteristic Curve): AUC-ROC measures the ability of the model to distinguish between the classes. An AUC with a value of 1 indicates a perfect model, and 0.5 indicates that the model is no better than random guessing. AUC-ROC is robust against class imbalance and is particularly useful for binary classification problems.  
+The F1 score is the harmonic mean of precision and recall. It is useful when the class imbalance is present and when false positives and false negatives carry different costs, which not knowing how our model will be used not sure of what those costs would be.  
+
+Overall, we decided to use kappa and accuracy for our measurement since our data is unbalanced.  Since we are just measuring income, it doesn't seem that any imprecision in the model has much of a cost.  
 
 #### What are some key insights you found through your analysis?
-**Answer:** 
+**Answer:** Ultimately, it seems that there is some X factor on why some people were able to make a different income than others.  Why would some with just a High school education make over 50k as a similar total number of people with some college or even a bachelors degree.  The overall number of people in both income groups was different, but why are some people able to make over 50k and others aren't considering based on these variables the have very similar backgrounds or history? Our only assumption is that the data is too unbalanced to provide accurate predictions. This can be easily seen from the ratio of men to women, as well as how much less data is available within the income above 50K observations. We did some basic hyperparameter adjustments on some of the models, but in the end opted to work with the defaults for ease and quickness.  
 
 
 # Grading
@@ -446,4 +470,3 @@ pc5=Black-Professional-American
 * justification of choice of metric  
 * discussion of choice or tuning of hyperparameters, if any  
 * meaningful discussion of predictive power and conclusions from model  
-
