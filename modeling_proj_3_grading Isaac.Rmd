@@ -161,7 +161,7 @@ head(incomek)
 
 ##Visualize Clusters
 ```{r}
-#what do these mean?
+
 incomek %>% 
   pivot_longer(c(age, fnlwgt, `education-num`),names_to = "feature") %>% 
   ggplot(aes(value, fill=.cluster))+
@@ -205,7 +205,7 @@ kclusts <- tibble(k = 1:9) %>%
 assignments <- kclusts %>% 
   unnest(augmented)
 
-#changed from price points from lecture
+
 ggplot(assignments, aes(`hours-per-week`, `education-num`)) +
   geom_point(aes(color = .cluster), alpha=0.3) + 
   facet_wrap(~ k)
@@ -774,7 +774,7 @@ education_counts <- income3 %>%
 education_counts
 
 ```
-##occupation
+##occupation (skip)
 ```{r}
 
 unique(income3$occupation)
@@ -982,7 +982,7 @@ confusionMatrix(predict(fit_xgb, test), factor(test$income_above_50k))
 
 ```
 
-##Multiple Accuracy measurements
+##Multiple Accuracy measurements (Skip)
 ```{r setup, eval=FALSE, message=False, warning=FALSE}
 
 ctrl <- trainControl(method = "cv", number = 5, classProbs = TRUE, summaryFunction = defaultSummary)
@@ -999,7 +999,7 @@ summary(results, metric = "Accuracy")
 
 ```
 
-##Multiple Kappa
+##Multiple Kappa (Skip)
 ```{r setup, eval=FALSE, message=False, warning=FALSE}
 
 ctrl <- trainControl(method = "cv", number = 5, classProbs = TRUE, summaryFunction = defaultSummary)
@@ -1016,7 +1016,7 @@ summary(results, metric = "Kappa")
 
 ```
 
-##Multiple AUC
+##Multiple AUC (Skip)
 ```{r setup, eval=FALSE, message=False, warning=FALSE}
 
 ctrl <- trainControl(method = "cv", number = 5, classProbs = TRUE, summaryFunction = twoClassSummary)
@@ -1046,7 +1046,7 @@ plot(myRoc)
 
 ```
 
-##Multiple F1
+##Multiple F1 (Skip)
 ```{r setup, eval=FALSE, message=False, warning=FALSE}
 
 ctrl <- trainControl(method = "cv", number = 5, classProbs = TRUE, summaryFunction = prSummary)
@@ -1181,6 +1181,7 @@ time_taken <- end_time - start_time
 print(time_taken)
 print(as.numeric(time_taken, units = "mins"))
 ```
+
 ##Tuesday pt3 w/EDA pt2 variables RF Kappa .46
 ```{r}
 
